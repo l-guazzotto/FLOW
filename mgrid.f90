@@ -38,6 +38,8 @@ subroutine mgrid(psi,rho,residual,b_phi)
   integer :: alloc_stat
   integer :: acc_switch = 65
 
+
+
 !	allocate(ind_bound(1,1))
 !	allocate(coord_bound(1,1))
 

@@ -2258,6 +2258,8 @@ subroutine bc_psi_rho7(psi,rho,nx,nz)
 	integer :: itemax = 10000
 	integer :: imin, imax, istep
 
+	
+
     den = dofpsi(0.0d0)
 	psi_val = 0.d0
 
@@ -12776,7 +12778,7 @@ subroutine update_rho_gauss_first(psi_in,rho,b_phi,nx,nz,seek_mtm,mtm_acc,min_dr
 
 !		  print *, rho(i,j), i,j
 
-		  Alf = g_phi**2/rho(i,j)	! Alfvén square
+		  Alf = g_phi**2/rho(i,j)	! Alfvï¿½n square
 		  plocg = gamma*g_S*rho(i,j)**gamma
 !!$		  disc = -(1.d0-Alf)**2* ( Alf*(g_bfield**2+plocg)-plocg)  &
 		  disc = - ( Alf*(g_bfield**2+plocg)-plocg)  &
@@ -12921,7 +12923,7 @@ end subroutine ngs_solve_wrapper
 	real(kind=dkind), dimension(-1:1,-1:1) :: psi_around
 	real(kind=dkind) :: orp_3step = 5.d-2
 	integer :: i_zone = 1 !This will ony be changed if bc_type==7
-!	logical, save :: initialize_zones = .true.
+	logical, save :: initialize_zones = .true. !Will only be used for bc_type==7
 
 	integer iii,jjj
 
@@ -12939,7 +12941,9 @@ end subroutine ngs_solve_wrapper
 		 pause
 		 stop
 	endif
-
+	! Uncomment below if you want to track psi123 in debugger
+	if(allocated(psi123)) print *, psi123
+	
 	psi123 = 0.d0
 
 	do h=1,h_steps
@@ -12951,7 +12955,7 @@ end subroutine ngs_solve_wrapper
 	enddo
 	enddo
 	enddo
-
+	
 	if((eq_type==3).and.(tri_type==11)) then
 		bpol0_temp = bpol0_fix
 		if(nx>n_min) then
@@ -13016,14 +13020,17 @@ end subroutine ngs_solve_wrapper
 
 	ipsic = nx/2
 	jpsic = nz/2
-
-!	if((initialize_zones).and.(bc_type==7)) then
+ 
+	!if((initialize_zones).and.(bc_type==7)) then
+	!	call update_sort_grid(psi123(1,:,:),nx,nz,inorm,0)
+	!	initialize_zones = .false.
+	!
+	!elseif(bc_type==7) then
+	!	call update_sort_grid(psi123(1,:,:),nx,nz,inorm)
+	!endif
+	!uncomment below if not using initialize_zones
 	if(bc_type==7) then
-
 		call update_sort_grid(psi123(1,:,:),nx,nz,inorm)
-!		call update_sort_grid(psi123(1,:,:),nx,nz,inorm,0)
-!		initialize_zones = .false.
-
 	endif
 
     if(Broot/=3) then
@@ -13102,7 +13109,7 @@ end subroutine ngs_solve_wrapper
 
 				else
 
-					if(sort_grid(i,j,0)<0) then ! change back to <= March 17 2021
+					if(sort_grid(i,j,0)<0.and.bc_type/=7) then ! change back to <= March 17 2021
 !					if((sort_grid(i,j,0)<0).or.((sort_grid(i,j,0)==0).and.(bc_type/=7))) then
 					   cycle
 					end if
@@ -13609,7 +13616,15 @@ end subroutine ngs_solve_wrapper
 			  !  psi(i,j) = psi(i,j)*(1.d0-orp) + orp*psinew
 
 				if(h_steps==1) then
+					!if (i==9 .and. j==2) then
+					!print*, psi123(1,i,j)
+					!endif
 					psi123(1,i,j) = psi0 - orp*res/den
+					!if (i==9 .and. j==2) then
+					!print*, psi123(1,i,j)
+					!endif
+					continue	
+					
 				elseif((h_steps==3).and.(h<3)) then
 
 !!$					if( ((tri_type/=13).AND.((psi0/psic)<fraction))  &
@@ -13744,24 +13759,24 @@ end subroutine ngs_solve_wrapper
 !   	   call bc_psi_rho0(psi123(1,:,:),rho,nx,nz)
 
 
-		do j=1,nz
-		do i=1,nx
+		!do j=1,nz
+		!do i=1,nx
 
-			psi_in(i,j) = psi123(1,i,j)
+		!	psi_in(i,j) = psi123(1,i,j)
+			
+		!enddo
+		!enddo
 
-		enddo
-		enddo
 
+   	   !call bc_psi_rho0(psi_in(:,:),rho,nx,nz)
 
-   	   call bc_psi_rho0(psi_in,rho,nx,nz)
+		!do j=1,nz
+		!do i=1,nx
 
-		do j=1,nz
-		do i=1,nx
+		!	psi123(1,i,j) = psi_in(i,j)
 
-			psi123(1,i,j) = psi_in(i,j)
-
-		enddo
-		enddo
+		!enddo
+		!enddo
 
 
 	   if(tri_type==11) then
@@ -13837,6 +13852,7 @@ end subroutine ngs_solve_wrapper
           print *, "The Over-Relaxation Parameter =",orp,std_orp
 
  			call step_output(nx,psi123(1,:,:),rho,residual)
+			! below if statement deprecated
 			if(((tri_type==-2).or.(tri_type==-3)).and.(k==50).and.(.not.(tri_type_m2_ready))) then
 				initialize_r_for_tri_type_m2 = .true.
 			endif
@@ -22191,7 +22207,7 @@ end subroutine ngs_solve_all_gauss
 
 			! check for hyperbolic regions
 
-		  Alf = malfven2(j,k)	! Alfvén square
+		  Alf = malfven2(j,k)	! Alfvï¿½n square
 		  plocg = gamma*Sofpsi(psi(j,k),i_zone)*rho(j,k)**gamma
 		  bpol = sqrt(bx(j,k)**2+bz(j,k)**2)
 		  bfield=sqrt(bx(j,k)**2+by(j,k)**2+bz(j,k)**2)
@@ -22543,8 +22559,13 @@ subroutine psiout
 !!$	return
 	xmin = 0.d0
 
+! csv formatting and output added by Ian
+! Certainly not an intelligent way to do this, but the code here is already rather WET, so it shouldn't matter too much
+46  format(e12.6,",",e12.6)
+
 	!-----------------------------------------------------
 	open(44,file='d.plt',status='unknown',action='write')
+	open(45,file='d.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22561,11 +22582,14 @@ subroutine psiout
 		endif
 		y=dofpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	!-----------------------------------------------------
 	open(44,file='dddpsi.plt',status='unknown',action='write')
+	open(45,file='dddpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22580,13 +22604,16 @@ subroutine psiout
 		endif
 		y=dddpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	xmin = 0.d0
 
 	!-----------------------------------------------------
 	open(44,file='pofpsi.plt',status='unknown',action='write')
+	open(45,file='pofpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22603,11 +22630,14 @@ subroutine psiout
 		endif
 		y=pofpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	!-----------------------------------------------------
 	open(44,file='dpdpsi.plt',status='unknown',action='write')
+	open(45,file='dpdpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22622,8 +22652,10 @@ subroutine psiout
 		endif
 		y=dpdpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	xmin = 0.d0
 
@@ -22631,6 +22663,7 @@ subroutine psiout
 
 		!-----------------------------------------------------
 		open(44,file='pparofpsi.plt',status='unknown',action='write')
+		open(45,file='pparofpsi.csv',status='unknown',action='write')
 
 		write(44,*)'TITLE="solution of GS equation with flow"'
 		write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22640,11 +22673,14 @@ subroutine psiout
 			x=i*psic/nsave
 			y=pparofpsi(x)
 			write(44,*) x/psic,y
+			write(45,46) x/psic,y
 		enddo
 		close(44)
+		close(45)
 
 		!-----------------------------------------------------
 		open(44,file='pperpofpsi.plt',status='unknown',action='write')
+		open(45,file='pperpofpsi.csv',status='unknown',action='write')
 
 		write(44,*)'TITLE="solution of GS equation with flow"'
 		write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22654,11 +22690,14 @@ subroutine psiout
 			x=i*psic/nsave
 			y=pperpofpsi(x)
 			write(44,*) x/psic,y
+			write(45,46) x/psic,y
 		enddo
 		close(44)
+		close(45)
 
 		!-----------------------------------------------------
 		open(44,file='dppardpsi.plt',status='unknown',action='write')
+		open(45,file='dppardpsi.csv',status='unknown',action='write')
 
 		write(44,*)'TITLE="solution of GS equation with flow"'
 		write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22668,11 +22707,14 @@ subroutine psiout
 			x=i*psic/nsave
 			y=dppardpsi(x)
 			write(44,*) x/psic,y
+			write(45,46) x/psic,y
 		enddo
 		close(44)
+		close(45)
 
 		!-----------------------------------------------------
 		open(44,file='dpperpdpsi.plt',status='unknown',action='write')
+		open(45,file='dpperpdpsi.csv',status='unknown',action='write')
 
 		write(44,*)'TITLE="solution of GS equation with flow"'
 		write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22682,13 +22724,16 @@ subroutine psiout
 			x=i*psic/nsave
 			y=dpperpdpsi(x)
 			write(44,*) x/psic,y
+			write(45,46) x/psic,y
 		enddo
 		close(44)
+		close(45)
 
 	endif
 
 	!-----------------------------------------------------
 	open(44,file='mach_phi.plt',status='unknown',action='write')
+	open(45,file='mach_phi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22705,11 +22750,14 @@ subroutine psiout
 		endif
 		y=mach_phi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 !	-----------------------------------------------------
 	open(44,file='dmach_phidpsi.plt',status='unknown',action='write')
+	open(45,file='dmach_phidpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		
@@ -22724,13 +22772,16 @@ subroutine psiout
 		endif
 		y=dmach_phidpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	xmin = 0.d0
 
 	!-----------------------------------------------------
 	open(44,file='mach_theta.plt',status='unknown',action='write')
+	open(45,file='mach_theta.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22747,11 +22798,14 @@ subroutine psiout
 		endif
 		y=mach_theta(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 !	-----------------------------------------------------
 	open(44,file='dmach_thetadpsi.plt',status='unknown',action='write')
+	open(45,file='dmach_thetadpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		
@@ -22766,13 +22820,16 @@ subroutine psiout
 		endif
 		y=dmach_thetadpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	xmin = 0.d0
 
 	!-----------------------------------------------------
 	open(44,file='bzero.plt',status='unknown',action='write')
+	open(45,file='bzero.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22789,11 +22846,14 @@ subroutine psiout
 		endif
 		y=bzero(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	!-----------------------------------------------------
 	open(44,file='dbzerodpsi.plt',status='unknown',action='write')
+	open(45,file='dbzerodpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22808,8 +22868,10 @@ subroutine psiout
 		endif
 		y=dbzerodpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	xmin = 0.d0
 !
@@ -22817,6 +22879,7 @@ subroutine psiout
 	! Set xmin to a negative constant for Hameiri's functions
 	!-----------------------------------------------------
 	open(44,file='omega.plt',status='unknown',action='write')
+	open(45,file='omega.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22833,11 +22896,14 @@ subroutine psiout
 		endif
 		y=omegaofpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	!-----------------------------------------------------
 	open(44,file='domegadpsi.plt',status='unknown',action='write')
+	open(45,file='domegadpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		
@@ -22852,12 +22918,15 @@ subroutine psiout
 		endif
 		y=domegadpsi(x,zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 
 	close(44)
+	close(45)
 
 !	!-----------------------------------------------------
 	open(44,file='h.plt',status='unknown',action='write')
+	open(45,file='h.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		
@@ -22872,11 +22941,14 @@ subroutine psiout
 		endif
 		y=hofpsi(x, zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	!-----------------------------------------------------
 	open(44,file='dhdpsi.plt',status='unknown',action='write')
+	open(45,file='dhdpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'	
@@ -22891,8 +22963,10 @@ subroutine psiout
 		endif
 		y=dhdpsi(x, zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 !
 !	!-----------------------------------------------------
@@ -22929,6 +23003,7 @@ subroutine psiout
 
 		!-----------------------------------------------------
 		open(44,file='vol.plt',status='unknown',action='write')
+		open(45,file='vol.csv',status='unknown',action='write')
 
 		write(44,*)'TITLE="solution of GS equation with flow"'
 		write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22938,11 +23013,14 @@ subroutine psiout
 			x=i*psic/nsave
 			y=volofpsi(x)
 			write(44,*) x/psic,y
+			write(45,46) x/psic,y
 		enddo
 		close(44)
+		close(45)
 
 		!-----------------------------------------------------
 		open(44,file='dvoldpsi.plt',status='unknown',action='write')
+		open(45,file='dvoldpsi.csv',status='unknown',action='write')
 
 		write(44,*)'TITLE="solution of GS equation with flow"'
 		write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -22952,8 +23030,10 @@ subroutine psiout
 			x=i*psic/nsave
 			y=dvdpsi(x)
 			write(44,*) x/psic,y
+			write(45,46) x/psic,y
 		enddo
 		close(44)
+		close(45)
 
 	endif
 
@@ -22994,6 +23074,7 @@ subroutine psiout
 
 	!-----------------------------------------------------
 	open(44,file='s.plt',status='unknown',action='write')
+	open(45,file='s.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -23008,11 +23089,14 @@ subroutine psiout
 		endif
 		y=sofpsi(x, zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	!-----------------------------------------------------
 	open(44,file='dsdpsi.plt',status='unknown',action='write')
+	open(45,file='dsdpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -23027,11 +23111,14 @@ subroutine psiout
 		endif
 		y=dsdpsi(x, zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	!-----------------------------------------------------
 	open(44,file='phi.plt',status='unknown',action='write')
+	open(45,file='phi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -23046,12 +23133,15 @@ subroutine psiout
 		endif
 		y=phiofpsi(x, zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 
 	!-----------------------------------------------------
 	open(44,file='dphidpsi.plt',status='unknown',action='write')
+	open(45,file='dphidpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -23066,11 +23156,14 @@ subroutine psiout
 		endif
 		y=dphidpsi(x, zone_temp)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	!-----------------------------------------------------
 	open(44,file='F.plt',status='unknown',action='write')
+	open(45,file='F.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -23085,37 +23178,48 @@ subroutine psiout
 		endif
 		y=iofpsi(x, zone_temp)*sqrt(mu_mag)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 
 	open(44,file='d.dat',status='unknown',action='write')
+	open(45,file='d.csv',status='unknown',action='write')
 
 	do i=0,101
 		x=i/101.d0*psic
 		y=dofpsi(x)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	open(44,file='p.dat',status='unknown',action='write')
+	open(45,file='p.csv',status='unknown',action='write')
 
 	do i=0,101
 		x=i/101.d0*psic
 		y=pofpsi(x)
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 
 	open(44,file='b.dat',status='unknown',action='write')
+	open(45,file='b.csv',status='unknown',action='write')
 
 	do i=0,101
 		x=i/101.d0*psic
 		y=bzero(x)*rmajor
 		write(44,*) x/psic,y
+		write(45,46) x/psic,y
 	enddo
 	close(44)
+	close(45)
 
 	continue
 
@@ -23651,7 +23755,10 @@ subroutine getqstar(psi,jphi,p,bpol,bphi,beta,rho,vr,vphi,vz,n)
 	print*, 'betapol = ',betapol
 	print*, 'epsilon = ',epsilon
 
+	! CSV output added by Ian (again, not done intelligently)
+
 	open(99,file='qstar.out',status='unknown',action='write')
+	open(100,file='qstar.csv',status='unknown',action='write')
 
 	write(99,*) 'qstar = ',qstar
 	write(99,*) 'surf = ',surf
@@ -23679,6 +23786,32 @@ subroutine getqstar(psi,jphi,p,bpol,bphi,beta,rho,vr,vphi,vz,n)
 	write(99,*) 'f_BS_Sauter = ', I_Sauter_phi/curr
 	write(99,*) 'f_BS_NCLASS = ', I_NCLASS_phi/curr
 
+	write(100,*) 'qstar',",",qstar
+	write(100,*) 'surf',",",surf
+	write(100,*) 'volume',",",vol
+	write(100,*) 'plasma current',",",curr
+	write(100,*) 'nu',",", nu
+	write(100,*) 'betator',",",betator
+	write(100,*) 'betapol',",",betapol
+	write(100,*) 'average epsilon',",",epsilon
+	write(100,*) 'inverse aspect ratio',",",inv_aspect_ratio
+	write(100,*) 'total pressure * area',",", ptot
+!	write(100,*) 'total current',",", Itot
+	write(100,*) 'beta_LDX',",", beta_LDX
+	write(100,*) 'B_phi_average',",", bphiav
+	write(100,*) 'B_pol_average',",", bpolav
+	write(100,*) 'mass',",", mass
+	write(100,*) 'kinetic energy',",", kin_en
+	write(100,*) 'L_i',",", big_L_i
+	write(100,*) 'small_l_i',",", small_l_i
+	write(100,*) 'I_BS_Sauter',",", I_Sauter
+	write(100,*) 'I_BS_NCLASS',",", I_NCLASS
+	write(100,*) 'I_BS_Sauter_phi',",", I_Sauter_phi
+	write(100,*) 'I_BS_NCLASS_phi',",", I_NCLASS_phi
+	write(100,*) 'f_BS_Sauter',",", I_Sauter_phi/curr
+	write(100,*) 'f_BS_NCLASS',",", I_NCLASS_phi/curr
+	
+
 	if((Broot==0).and.(jump_option<=-5)) then
 
 		write(99,*) 'Bpol line integral (in, out):', Bpint(1), Bpint(2)
@@ -23690,6 +23823,7 @@ subroutine getqstar(psi,jphi,p,bpol,bphi,beta,rho,vr,vphi,vz,n)
 
 
 	close(99)
+	close(100)
 
 	if((broot==4).or.(broot==5)) then
 
@@ -24514,6 +24648,7 @@ subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
     rguessl0 = (x_coord(n)-x_coord(1)+z_coord(n)-z_coord(1))/5.d2
 
     open(69,file='poloidal_viscosity.plt',action='write')
+    open(70,file='poloidal_viscosity.csv',action='write')
 
     write(69,*)'TITLE="poloidal viscosity for solution of GS equation with flow"'
     write(69,*)'Variables ="theta", "r", "R [m] ","z [m]", "viscosity"'
@@ -24653,6 +24788,7 @@ subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
           poloidal_viscosity(i,k) = poloidal_viscosity(i,k) / sqrt(1.d0+(rlocprim/rloc)**2)
 
           write(69,1234) thetaloc, rloc, bigrloc, zloc, poloidal_viscosity(i,k)
+          write(70,1235) thetaloc, rloc, bigrloc, zloc, poloidal_viscosity(i,k)
 
        enddo
 
@@ -24765,8 +24901,10 @@ subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
     enddo
 
     close(69)
+    close(70)
 
 1234 format(5(e16.9, 2x))
+1235 format(4(e16.9,','),(e16.9))
 
     !--------------------11/13/2009: poloidal cross section calculation--------------------
     ! note the approximation in the major radius!
@@ -27492,6 +27630,7 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	tri_type_true = tri_type
 
 	! We need to skip the tri_type=-4 check on the first call to this routine
+	! NOTE: part below is probably deprecated, but will need to double check
 	if(present(pass)) then
 		if((pass==0).and.(tri_type==-4)) then
 			tri_type = -1
@@ -27540,8 +27679,8 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 
 			if(tri_type==-1) then
 
-				 if((((bc_type==7).or.(bc_type==8)).and.(psi(i,j)<0.d0))  &
-						.or. ((bc_type==7).and.(sqrt((x_coord(i)-rmajor)**2+z_coord(j)**2)>0.4d0*z_size))) then
+				 if((((bc_type==7).or.(bc_type==8)).and.(psi(i,j)<0.d0)) ) then !&
+						!.or. ((bc_type==7).and.(sqrt((x_coord(i)-rmajor)**2+z_coord(j)**2)>0.4d0*z_size))) then
 
 					sort_grid(i,j,0) = 1 ! External zone
 
@@ -27720,6 +27859,7 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	endif
 
 	open(33,file='grid.plt')
+	open(34,file='grid.csv')
 
 	write(33,*)'TITLE="grid"'
 	write(33,*)'Variables =" x ","y", "boh"'
@@ -27730,11 +27870,13 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	do i = 1,nx
 
 		write(33,*) x_coord(i), z_coord(j),  sort_grid(i,j,0)
+		write(34,*) x_coord(i), ",", z_coord(j), ",",  sort_grid(i,j,0)
 
 	enddo
 	enddo
 
 	close(33)
+	close(34)
 
 	if(tri_type_true/=tri_type) then
 		tri_type = tri_type_true
@@ -27980,7 +28122,7 @@ end subroutine update_sort_grid_old
 
 			r_in = dbsval(angle, r_ord, r_data(1:theta_points2+r_ord,6),  &
 				theta_points2, r_cscoef(2,1:theta_points2) )
-
+			
 			r = r_in
 
 
@@ -28542,6 +28684,7 @@ end subroutine update_sort_grid_old
 
 			r_in = dbsval(angle, r_ord, r_data(1:theta_points2+r_ord,6),  &
 				theta_points2, r_cscoef(2,1:theta_points2) )
+			!print *, angle, ", ", r_out
 
 		else
 

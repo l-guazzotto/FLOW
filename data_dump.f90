@@ -29,6 +29,7 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
 
 
     open (unit=17,file=fname//'.plt')
+    open (unit=18,file=fname//'.csv') ! csv output added by Ian
 
     write(17,*)'TITLE="solution of GS equation with flow"'
     write(17,*)'Variables =" x ","y", "var"'		!, 	fname
@@ -75,13 +76,16 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
 					.or.(fname=='residual_step').or.(fname=='rho_step').or.(fname=='psi_chease' ).or.(fname=='psi_eqdsk1')  &
 					.or.(fname=='psi_eqdsk2').or.(fname=='psi_eqdsk3').or.(bc_type==7).or.(bc_type==8)) then
 					write(17,88) x,z,psi(i,j)
+                    write(18,89) x,z,psi(i,j)
 	!				write(44,88) x,z,psi(i,j)
 				else
 					write(17,88) x,z,0.d0
+                    write(18,89) x,z,0.d0
 				endif
 
 			else
 				write(17,88) x,z,0.d0
+                                write(18,89) x,z,0.d0
 !				write(44,88) x,z,0.d0
 			endif
 
@@ -89,8 +93,10 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
 	end do
 
 	close(17)
+        close(18)
  !   close(44)
 88   format(3(e12.6,3x))
+89   format(2(e15.7,","), (e15.7))
 
 
 

@@ -1,9 +1,14 @@
-F95 = gfortran
+F95 = gfortran-9
 #F95 = pgfortran
 
 #FFLAGS =  -O3
-FFLAGS =  -O3  -ffree-line-length-0
-FFLAGS2 =   -ffree-line-length-0
+FFLAGS =  -Og -g -fPIC -ffree-line-length-0
+#FFLAGS = -O3 -fPIC -ffree-line-length-0
+#FFLAGS2 =   -ffree-line-length-0
+# For debug only: compile w/ more verbose options and backtrace
+#FFLAGS = -Og -g -fPIC -ffree-line-length-0 -fcheck=all -Wall -fbacktrace
+#FFLAGS = -Og -g -fPIC -ffree-line-length-0 -Wall -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -pedantic -fbacktrace
+
 LINK	= $(F95) $(FFLAGS)
 LINK2	= $(F95) $(FFLAGS2)
 

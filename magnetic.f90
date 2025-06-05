@@ -22,7 +22,7 @@ module magnetic
   ! B_phi * R = F = ( fvaccuum**2-eta_P*2.d0*mu_mag*rmajor**2*pofpsi(psi) )**0.5
   real(kind=dkind) :: eta_P
 
-  ! stuff for super-Alfvénic equilibria begins here...
+  ! stuff for super-Alfvï¿½nic equilibria begins here...
   real (kind=dkind) :: b_vert
   real (kind=dkind) :: b_edge
 
