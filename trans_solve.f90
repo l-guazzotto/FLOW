@@ -6074,7 +6074,7 @@ function mach_phi(psi) result (answer)
 
 		if((apsi/psic) > 1.d0) then
 			answer = mphi_data(ibreak_fi-mphi_ord,2)
-		!Modified by Ian: trying to get 2017 version running DIII-D free-boundary input to work
+		!Modified by Ian: trying to get 2020 version running DIII-D free-boundary input to work
 		elseif((apsi/psic) < mphi_data(1,1)) then
 			answer = mphi_data(1,2)
 		!elseif((apsi/psic)>=1.d0) then 
@@ -6233,7 +6233,7 @@ function dmach_phidpsi(psi) result (answer)
 
 			answer = dbsder(1,1.d0, mphi_ord, mphi_data(1:ibreak_fi,3),  &
 							ibreak_fi-mphi_ord, mphi_cscoef(1,:) )
-		!Modified by Ian: trying to get 2017 version running DIII-D free-boundary input to work
+		!Modified by Ian: trying to get 2020 version running DIII-D free-boundary input to work
 		elseif(apsi/psic<mphi_data(1,1)) then
 
 			answer = dbsder(1,0.d0, mphi_ord, mphi_data(1:ibreak_fi,3),  &
@@ -20418,6 +20418,19 @@ end subroutine ngs_solve_all_gauss
   subroutine step_output(n,psi,rho,residual)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+        
+  interface
+          subroutine radial_plot(psi, truepsi, nx, nz, fname, iz, fname_output_data)
+                  import :: skind
+                  import :: dkind
+                  integer, intent(in) :: nx,nz,iz
+                  real (kind=skind), dimension(1:nx,1:nz), intent(in) :: psi
+                  real (kind=dkind), dimension(1:nx,1:nz), intent(in) :: truepsi
+                  character (len=*), intent(in) ::fname
+                  real (kind=dkind), dimension(1:nx*nz,1:3), intent(out), optional :: fname_output_data
+          end subroutine 
+  end interface
+
 	integer :: n
 	real (kind=skind), dimension(n,n) :: out
 	real (kind=dkind), dimension(n,n) :: rho, psi,residual
@@ -21214,23 +21227,24 @@ end subroutine check_flow
 
 
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-subroutine psiout
+subroutine psiout(phi_output_data)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 	!This subroutine writes the most important functions of Psi
 	!and their derivatives in a text format
 	!this is mainly for debugging purposes, and will not 
 	! be used in the normal operation of the code
-
-	integer i
+	
+        integer i
 	real (kind=dkind) x,y
 	real(kind=dkind) :: gtheta_bound_dump
-	integer :: nsave = 201
+	integer, parameter :: nsave = 201
+        real (kind=dkind), dimension(1:nsave+1,1:2), intent(out) :: phi_output_data
 
 !!$	return
-! csv formatting and output added by Ian
-! Certainly not an intelligent way to do this, but the code here is already rather WET, so it shouldn't matter too much
-	46  format(e12.6,",",e12.6)
+
+! csv formatting and outputs added here by Ian
+46  format(e12.6,",",e12.6)
 
 	!-----------------------------------------------------
 	open(44,file='d.plt',status='unknown',action='write')
@@ -21364,7 +21378,6 @@ subroutine psiout
 		do i=0, nsave
 			x=i*psic/nsave
 			y=dpperpdpsi(x)
-			write(44,*) x/psic,y
 			write(45,46) x/psic,y
 		enddo
 		close(44)
@@ -21374,24 +21387,25 @@ subroutine psiout
 
 	!-----------------------------------------------------
 	open(44,file='mach_phi.plt',status='unknown',action='write')
-	open(45,file='mach_phi.csv',status='unknown',action='write')
+        open(45,file='mach_phi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
     write(44,*)'ZONE I=', nsave+1,',F=Point'
 
+
 	do i=0, nsave
 		x=i*psic/nsave
 		y=mach_phi(x)
 		write(44,*) x/psic,y
-		write(45,46) x/psic,y
+                write(45,46) x/psic,y
 	enddo
 	close(44)
-	close(45)
+        close(45) 
 
-	!	-----------------------------------------------------
-	open(44,file='dmach_phidpsi.plt',status='unknown',action='write')
-	open(45,file='dmach_phidpsi.csv',status='unknown',action='write')
+	!-----------------------------------------------------
+	open(44,file='mach_theta.plt',status='unknown',action='write')
+        open(45,file='mach_theta.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -21401,15 +21415,14 @@ subroutine psiout
 		x=i*psic/nsave
 		y=mach_theta(x)
 		write(44,*) x/psic,y
-		write(45,46) x/psic,y
+                write(45,46) x/psic,y
 	enddo
 	close(44)
-	close(45)
+        close(45)
 
-
-	!-----------------------------------------------------
-	open(44,file='mach_theta.plt',status='unknown',action='write')
-	open(45,file='mach_theta.csv',status='unknown',action='write')
+!	-----------------------------------------------------
+	open(44,file='dmach_phidpsi.plt',status='unknown',action='write')
+	open(45,file='dmach_phidpsi.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		
@@ -21441,7 +21454,6 @@ subroutine psiout
 	close(44)
 	close(45)
 
-
 	!-----------------------------------------------------
 	open(44,file='bzero.plt',status='unknown',action='write')
 	open(45,file='bzero.csv',status='unknown',action='write')
@@ -21457,7 +21469,7 @@ subroutine psiout
 		write(45,46) x/psic,y
 	enddo
 	close(44)
-	close(45)
+        close(45)
 
 	!-----------------------------------------------------
 	open(44,file='dbzerodpsi.plt',status='unknown',action='write')
@@ -21475,10 +21487,10 @@ subroutine psiout
 	enddo
 	close(44)
 	close(45)
-
+!
 	!-----------------------------------------------------
 	open(44,file='omega.plt',status='unknown',action='write')
-	open(45,file='omega.csv',status='unknown',action='write')
+        open(45,file='omega.csv',status='unknown',action='write')
 
 	write(44,*)'TITLE="solution of GS equation with flow"'
     write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -21488,10 +21500,10 @@ subroutine psiout
 		x=i*psic/nsave
 		y=omegaofpsi(x)
 		write(44,*) x/psic,y
-		write(45,46) x/psic,y
+                write(45,46) x/psic,y
 	enddo
 	close(44)
-	close(45)
+        close(45)
 
 	!-----------------------------------------------------
 	open(44,file='domegadpsi.plt',status='unknown',action='write')
@@ -21580,7 +21592,6 @@ subroutine psiout
 
 		!-----------------------------------------------------
 		open(44,file='vol.plt',status='unknown',action='write')
-		open(45,file='vol.csv',status='unknown',action='write')
 
 		write(44,*)'TITLE="solution of GS equation with flow"'
 		write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -21590,14 +21601,11 @@ subroutine psiout
 			x=i*psic/nsave
 			y=volofpsi(x)
 			write(44,*) x/psic,y
-			write(45,46) x/psic,y
 		enddo
 		close(44)
-		close(45)
 
 		!-----------------------------------------------------
 		open(44,file='dvoldpsi.plt',status='unknown',action='write')
-		open(45,file='dvoldpsi.csv',status='unknown',action='write')
 
 		write(44,*)'TITLE="solution of GS equation with flow"'
 		write(44,*)'Variables =" psi " "var"'		!, 	fname
@@ -21607,10 +21615,8 @@ subroutine psiout
 			x=i*psic/nsave
 			y=dvdpsi(x)
 			write(44,*) x/psic,y
-			write(45,46) x/psic,y
 		enddo
 		close(44)
-		close(45)
 
 	endif
 
@@ -21696,6 +21702,8 @@ subroutine psiout
 		y=phiofpsi(x)
 		write(44,*) x/psic,y
 		write(45,46) x/psic,y
+                phi_output_data(i+1,1) = x/psic
+                phi_output_data(i+1,2) = y
 	enddo
 	close(44)
 	close(45)
@@ -21719,41 +21727,32 @@ subroutine psiout
 
 
 	open(44,file='d.dat',status='unknown',action='write')
-	open(45,file='d.csv',status='unknown',action='write')
 
 	do i=0,101
 		x=i/101.d0*psic
 		y=dofpsi(x)
 		write(44,*) x/psic,y
-		write(45,46) x/psic,y
 	enddo
 	close(44)
-	close(45)
 
 	open(44,file='p.dat',status='unknown',action='write')
-	open(45,file='p.csv',status='unknown',action='write')
 
 	do i=0,101
 		x=i/101.d0*psic
 		y=pofpsi(x)
 		write(44,*) x/psic,y
-		write(45,46) x/psic,y
 	enddo
 	close(44)
-	close(45)
 
 
 	open(44,file='b.dat',status='unknown',action='write')
-	open(45,file='b.csv',status='unknown',action='write')
 
 	do i=0,101
 		x=i/101.d0*psic
 		y=bzero(x)*rmajor
 		write(44,*) x/psic,y
-		write(45,46) x/psic,y
 	enddo
 	close(44)
-	close(45)
 
 	continue
 
@@ -22921,7 +22920,7 @@ subroutine magnetic_inversion(psi_all,xmax,zmax)
 end subroutine magnetic_inversion
 
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
-subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
+subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax,poloidal_viscosity_data)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  
 
     use pseudo_IMSL, only : DBS2IN, DBS2VL, DBSNAK, DBSINT, DBSDER
@@ -22933,7 +22932,7 @@ subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
     real(kind=dkind) :: psimax, delta, rguessl, rguessr, rguessl0, rguessr0
     real(kind=dkind) :: psiloc, thetaloc, rloc,  rlocprim, bigrloc, zloc,  &
          bpolloc, bphiloc, B_max, B_min, rholoc
-    integer :: i, j,k
+    integer :: i, j, k
     integer :: nsurfdim
     integer :: n_int
     real(kind=dkind), dimension(:), allocatable :: w_int, t_int, integrand
@@ -22952,11 +22951,14 @@ subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
 
     real(kind=dkind), dimension(:,:), allocatable :: viscosity_logs
     real(kind=dkind), dimension(:,:), allocatable :: poloidal_viscosity
+    real(kind=dkind), dimension(:,:), allocatable, intent(out) :: poloidal_viscosity_data
     real(kind=dkind) :: rho_0, B_0	! for normalization
+
 
     ! first, allocate the arrays that would have been automatic,
     ! if not for the complaints of the LINUX compiler
 
+    allocate(poloidal_viscosity_data(1:((enq-0)*nsurf/2),1:5))
     allocate(bscoef_psi(1:n,1:n))
     allocate(bscoef_bpol(1:n,1:n))
     allocate(bscoef_bphi(1:n,1:n))
@@ -23152,7 +23154,7 @@ subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
     rguessl0 = (x_coord(n)-x_coord(1)+z_coord(n)-z_coord(1))/5.d2
 
     open(69,file='poloidal_viscosity.plt',action='write')
-	open(70,file='poloidal_viscosity.csv',action='write')
+    open(70,file='poloidal_viscosity.csv',action='write')
 
     write(69,*)'TITLE="poloidal viscosity for solution of GS equation with flow"'
     write(69,*)'Variables ="theta", "r", "R [m] ","z [m]", "viscosity"'
@@ -23291,8 +23293,21 @@ subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
 
           poloidal_viscosity(i,k) = poloidal_viscosity(i,k) / sqrt(1.d0+(rlocprim/rloc)**2)
 
-          write(69,1234) thetaloc, rloc, bigrloc, zloc, poloidal_viscosity(i,k)
-		  write(70,1235) thetaloc, rloc, bigrloc, zloc, poloidal_viscosity(i,k)
+          ! Was modified by Ian to cut off the last two psi curves
+          ! and to take the poloidal viscosity data and output it as an array
+          if (i <= enq-0) then
+             write(69,1234) thetaloc, rloc, bigrloc, zloc, poloidal_viscosity(i,k)
+             write(70,1235) thetaloc, rloc, bigrloc, zloc, poloidal_viscosity(i,k)
+             
+             ! different j than one above, keeps track of where we are in the i,k loops for allocating array data
+             j = ((i-1)*n_int + k)
+             ! same data as what goes into the .plt and .csv files
+             poloidal_viscosity_data(j,1) = thetaloc
+             poloidal_viscosity_data(j,2) = rloc
+             poloidal_viscosity_data(j,3) = bigrloc
+             poloidal_viscosity_data(j,4) = zloc
+             poloidal_viscosity_data(j,5) = poloidal_viscosity(i,k)
+          end if
 
        enddo
 
@@ -23405,7 +23420,7 @@ subroutine magnetic_output(psi_all,bpol,bphi,rho,csp,xmax,zmax)
     enddo
 
     close(69)
-	close(70)
+    close(70)
 
 1234 format(5(e16.9, 2x))
 1235 format(4(e16.9,','),(e16.9))
@@ -25711,11 +25726,10 @@ subroutine update_interface(psi,n,inorm)
 	integer :: n
 	real(kind=dkind), dimension(1:n,1:n) :: psi
 	real(kind=dkind) :: inorm
-        real(kind=dkind) :: psi_sol
 	real(kind=dkind) :: fnew
+	real(kind=dkind) :: psi_sol
 
 	external psi_sol
-
 
 	! first update fraction
 

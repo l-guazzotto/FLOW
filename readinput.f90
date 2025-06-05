@@ -1,5 +1,7 @@
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-subroutine readinput(m)
+subroutine readinput(m,input_n, input_p_iso, input_p_par, input_p_perp,&
+                input_F, input_omega, input_mtheta, input_psiprim, input_a_elps,&
+                input_b_elps, input_k_ellipt, input_delta_up, input_delta_down)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 	use array_dimensions
@@ -13,13 +15,26 @@ subroutine readinput(m)
 
 	implicit none
 
+        interface
+                subroutine read_numerical(input_n, input_p_iso, input_p_par, input_p_perp,&
+                                input_F, input_omega, input_mtheta, input_psiprim)
+                        real, dimension(:,:), intent(in), optional :: input_n, input_p_iso, input_p_par, input_p_perp,&
+                                input_F, input_omega, input_mtheta, input_psiprim 
+                end subroutine
+        end interface
+
 	integer :: m
+        real, dimension(:,:), intent(in), optional :: input_n, input_p_iso, input_p_par, input_p_perp,&
+                input_F, input_omega, input_mtheta, input_psiprim 
+        real, dimension(:), intent(in), optional :: input_a_elps, input_b_elps, input_k_ellipt,&
+                input_delta_up, input_delta_down
+
 	real(kind=dkind) :: Fc_o_Fv		!Fcenter/Fvacuum
 	real(kind=dkind) :: de_o_dc		!Dedge/Dcenter
 	real(kind=dkind) :: tpae_o_tpac !Tparedge/Tparcenter 
 	real(kind=dkind) ::	pe_o_pc		!Pedge/Pcenter
 
-
+        
 !	real(kind=dkind) :: rtsafe
 !	external  rtsafe
 
@@ -29,8 +44,32 @@ subroutine readinput(m)
 	open(unit=5,file='inputfile.dat',status='old')
 
 	read(5,input_which)
-
 	read(5,input_triangularity)
+
+        ! If triangularity inputs are provided functionally, then use those to replace the ones read from the inputfile
+        ! As noted in flow_mod, these inputs are scalars, but FORTRAN 95 only allows allocatable arrays, so this is the
+        ! dumb workaround to make this still work. (if there's a better of doing this, please fix this)
+        if(present(input_a_elps)) then
+                print*, "a_elps provided functionally; overriding information in inputfile."
+                a_elps = input_a_elps(1) !only taking first element in array
+        endif
+        if(present(input_b_elps)) then
+                print*, "b_elps provided functionally; overriding information in inputfile."
+                b_elps = input_b_elps(1)
+        endif
+        if(present(input_k_ellipt)) then
+                print*, "k_ellipt provided functionally; overriding information in inputfile."
+                k_ellipt = input_k_ellipt(1)
+        endif
+        if(present(input_delta_up)) then
+                print*, "delta_up provided functionally; overriding information in inputfile."
+                delta_up = input_delta_up(1)
+        endif
+        if(present(input_delta_down)) then
+                print*, "delta_down provided functionally; overriding information in inputfile."
+                delta_down = input_delta_down(1)
+        endif
+
 	read(5,input_constants)
 	read(5,input_flow)
 	read(5,input_magnetic)
@@ -208,7 +247,9 @@ subroutine readinput(m)
 
 			if(numerical_opt==1) then
 
-				call read_numerical
+				call read_numerical(input_n=input_n, input_p_iso=input_p_iso, &
+                                input_p_par=input_p_par, input_p_perp=input_p_perp, input_F=input_F, &
+                                input_omega=input_omega, input_mtheta=input_mtheta, input_psiprim=input_psiprim)
 
 			elseif(numerical_opt>=2) then
 
@@ -254,7 +295,8 @@ subroutine readinput(m)
 end subroutine readinput
 
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-subroutine read_numerical
+subroutine read_numerical(input_n, input_p_iso, input_p_par, input_p_perp,&
+                input_F, input_omega, input_mtheta, input_psiprim)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 	use constant
@@ -267,27 +309,43 @@ subroutine read_numerical
 	implicit none
 	integer i
 	integer :: d_dim
+        real, dimension(:,:), optional, intent(in) :: input_n, input_p_iso, input_p_par, input_p_perp,&
+                input_F, input_omega, input_mtheta, input_psiprim
 
 	if(numerical_n) then
 
+                !if data is provided in a functional way:
+                if(present(input_n)) then
+                        do i = 1, size(input_n,1)
+                                d_data(i,1) = input_n(i,1)
+                                d_data(i,2) = input_n(i,2)
+                        enddo
+                        !print *, d_data
+                        d_dim = size(input_n,1)
 
-		i = 0
+                !otherwise, open the datafiles instead
+                else
 
-		open(33,file='n.dat', status='old', action='read')
+		        i = 0
 
-		do
+		        open(33,file='n.dat', status='old', action='read')
 
-			i = i+1
-			read(33,*,end=19) d_data(i,1), d_data(i,2)
+		        do
 
-		enddo
+			        i = i+1
+			        read(33,*,end=19) d_data(i,1), d_data(i,2)
 
-	19	close(33)
+		        enddo
 
-		d_dim = i-1
+	                19	close(33)
+        
+		        d_dim = i-1
+                endif
 		ibreak_d = d_dim + d_ord
-
+                
+                if (.not.allocated(d_cscoef)) then
 		allocate(d_cscoef(1,d_dim))
+                endif
 
 
 		!this sets up the knots
@@ -295,12 +353,10 @@ subroutine read_numerical
 						d_ord,d_data(1:ibreak_d,3))
 
 		call DBSINT(d_dim, d_data(1:d_dim,1),  &
-			 d_data(1:d_dim,2), d_ord,  &
-			 d_data(1:ibreak_d,3),  &
-			 d_cscoef(1,1:d_dim))
-
+			d_data(1:d_dim,2), d_ord,  &
+			d_data(1:ibreak_d,3),  &
+			d_cscoef(1,1:d_dim))
 	
-
 	endif
 
 !!$	if(input_EQDSK) return
@@ -310,32 +366,45 @@ subroutine read_numerical
 
 	if(numerical_p_iso) then
 
-	i = 0
+                !if data is provided in a functional way:
+                if(present(input_p_iso)) then
+                        do i = 1, size(input_p_iso,1)
+                                p_iso_data(i,1) = input_p_iso(i,1)
+                                p_iso_data(i,2) = input_p_iso(i,2)
+                        enddo
+                        !print *, p_iso_data
+                        data_dim = size(input_p_iso,1)
 
-	open(33,file='p_iso.dat', status='old', action='read')
+                !otherwise, open the datafiles instead
+                else      
 
-	do 
+	                i = 0
 
-		i = i+1
-		read(33,*,end=66) p_iso_data(i,1), p_iso_data(i,2)
+	                open(33,file='p_iso.dat', status='old', action='read')
 
-	enddo
+	                do 
 
-66	close(33)
+		                i = i+1
+		                read(33,*,end=66) p_iso_data(i,1), p_iso_data(i,2)
 
-	data_dim = i-1
-	ibreak_p = data_dim + p_iso_ord
+	                enddo
 
-	allocate(p_iso_cscoef(1,data_dim))
+                        66	close(33)
 
-	!this sets up the knots
-	call DBSNAK(data_dim, p_iso_data(1:data_dim,1),  &
-					p_iso_ord,p_iso_data(1:ibreak_p,3))
+	                data_dim = i-1
+                endif
+	        ibreak_p = data_dim + p_iso_ord
 
-	call DBSINT(data_dim, p_iso_data(1:data_dim,1),  &
-		 p_iso_data(1:data_dim,2), p_iso_ord,  &
-		 p_iso_data(1:ibreak_p,3),  &
-		 p_iso_cscoef(1,1:data_dim))
+	        allocate(p_iso_cscoef(1,data_dim))
+
+	        !this sets up the knots
+	        call DBSNAK(data_dim, p_iso_data(1:data_dim,1),  &
+					        p_iso_ord,p_iso_data(1:ibreak_p,3))
+
+	        call DBSINT(data_dim, p_iso_data(1:data_dim,1),  &
+		         p_iso_data(1:data_dim,2), p_iso_ord,  &
+		         p_iso_data(1:ibreak_p,3),  &
+		         p_iso_cscoef(1,1:data_dim))
 
 
 
@@ -356,36 +425,49 @@ subroutine read_numerical
 
 	if(numerical_p_par) then
 
-	i = 0
+                !if data is provided in a functional way:
+                if(present(input_p_par)) then
+                        do i = 1, size(input_p_par,1)
+                                p_par_data(i,1) = input_p_par(i,1)
+                                p_par_data(i,2) = input_p_par(i,2)
+                        enddo
+                        !print *, p_par_data
+                        data_dim = size(input_p_par,1)
+                
+                !otherwise, open the datafiles instead
+                else
 
-	open(33,file='p_par.dat',  &
+	                i = 0
+
+	                open(33,file='p_par.dat',  &
 				status='old',action='read')
 
-	do 
+	                do 
 
-		i = i+1
-		read(33,*,end=67) p_par_data(i,1), p_par_data(i,2)
+		                i = i+1
+		                read(33,*,end=67) p_par_data(i,1), p_par_data(i,2)
 
-	enddo
+	                enddo
 
 67	close(33)
 
-	data_dim = i-1
-	ibreak_ppar = data_dim + ppar_ord
+	                data_dim = i-1
+                endif
+	        ibreak_ppar = data_dim + ppar_ord
 
-	allocate(ppar_cscoef(1,data_dim))
+	        allocate(ppar_cscoef(1,data_dim))
 
-	!this sets up the knots
-	call DBSNAK(data_dim, p_par_data(1:data_dim,1),  &
+	        !this sets up the knots
+	        call DBSNAK(data_dim, p_par_data(1:data_dim,1),  &
 					ppar_ord,p_par_data(1:ibreak_ppar,3))
 
-	call DBSINT(data_dim, p_par_data(1:data_dim,1),  &
-		 p_par_data(1:data_dim,2), ppar_ord,  &
-		 p_par_data(1:ibreak_ppar,3),  &
-		 ppar_cscoef(1,1:data_dim))
+	        call DBSINT(data_dim, p_par_data(1:data_dim,1),  &
+		        p_par_data(1:data_dim,2), ppar_ord,  &
+		        p_par_data(1:ibreak_ppar,3),  &
+		        ppar_cscoef(1,1:data_dim))
 
 
-	endif
+        endif
 
 
 
@@ -393,74 +475,100 @@ subroutine read_numerical
 
 	if(numerical_p_perp) then
 
-	i = 0
+                !if data is provided in a functional way:
+                if(present(input_p_perp)) then
+                        do i = 1, size(input_p_perp,1)
+                                p_perp_data(i,1) = input_p_perp(i,1)
+                                p_perp_data(i,2) = input_p_perp(i,2)
+                        enddo
+                        !print *, p_perp_data
+                        data_dim = size(input_p_perp,1)
+                
+                !otherwise, open the datafiles instead
+                else
 
-	open(33,file='p_perp.dat',  &
+	                i = 0
+
+	                open(33,file='p_perp.dat',  &
 				status='old',action='read')
 
-	do 
+	                do 
 
-		i = i+1
-		read(33,*,end=68) p_perp_data(i,1), p_perp_data(i,2)
+		                i = i+1
+		                read(33,*,end=68) p_perp_data(i,1), p_perp_data(i,2)
 
-	enddo
+	                enddo
 
 68	close(33)
 
-	data_dim = i-1
-	ibreak_pperp = data_dim + pperp_ord
+	                data_dim = i-1
+                endif
+	        ibreak_pperp = data_dim + pperp_ord
 
-	allocate(pperp_cscoef(1,data_dim))
+	        allocate(pperp_cscoef(1,data_dim))
 
-	!this sets up the knots
-	call DBSNAK(data_dim, p_perp_data(1:data_dim,1),  &
+	        !this sets up the knots
+	        call DBSNAK(data_dim, p_perp_data(1:data_dim,1),  &
 					pperp_ord,p_perp_data(1:ibreak_pperp,3))
 
-	call DBSINT(data_dim, p_perp_data(1:data_dim,1),  &
-		 p_perp_data(1:data_dim,2), pperp_ord,  &
-		 p_perp_data(1:ibreak_pperp,3),  &
-		 pperp_cscoef(1,1:data_dim))
+	        call DBSINT(data_dim, p_perp_data(1:data_dim,1),  &
+		        p_perp_data(1:data_dim,2), pperp_ord,  &
+		        p_perp_data(1:ibreak_pperp,3),  &
+		        pperp_cscoef(1,1:data_dim))
 
-	endif
+        endif
 
 
 !----------------------------------------------------------------------------
 
 	if(numerical_F) then
 
-	open(33,file='b0.dat', status='old', action='read')
+                !if data is provided in a functional way:
+                if(present(input_F)) then
+                        do i = 1, size(input_F,1)
+                                F_data(i,1) = input_F(i,1)
+                                F_data(i,2) = input_F(i,2)
+                                F_data(i,2) = F_data(i,2)/rmajor
+                        enddo
+                        !print *, F_data
+                        data_dim = size(input_F,1)
+                
+                !otherwise, open the datafiles instead
+                else
+                        
+                        open(33,file='b0.dat', status='old', action='read')
 
-	i = 0
+	                i = 0
 
-	do
-		i = i+1
-		read(33,*,end=69) F_data(i,1),F_data(i,2)
-		F_data(i,2) = F_data(i,2)/rmajor
-	enddo
+	                do
+		                i = i+1
+		                read(33,*,end=69) F_data(i,1),F_data(i,2)
+		                F_data(i,2) = F_data(i,2)/rmajor
+	                enddo
 
-69	close(33)
+                        69	close(33)
 
-	data_dim = i-1
-	ibreak_B0 = data_dim + F_ord
+	                data_dim = i-1
+                endif
+	        ibreak_B0 = data_dim + F_ord
 
-	allocate(F_cscoef(1,data_dim))
+	        allocate(F_cscoef(1,data_dim))
 
-	!this sets up the knots
-	call DBSNAK(data_dim, F_data(1:data_dim,1),  &
+	        !this sets up the knots
+	        call DBSNAK(data_dim, F_data(1:data_dim,1),  &
 					F_ord,F_data(1:ibreak_B0,3))
 
-	call DBSINT(data_dim, F_data(1:data_dim,1),  &
-		 F_data(1:data_dim,2), F_ord,  &
-		 F_data(1:ibreak_B0,3),  &
-		 F_cscoef(1,1:data_dim))
+	        call DBSINT(data_dim, F_data(1:data_dim,1),  &
+		        F_data(1:data_dim,2), F_ord,  &
+		        F_data(1:ibreak_B0,3),  &
+		        F_cscoef(1,1:data_dim))
 
-	endif
+        endif
 
 
 !----------------------------------------------------------------------------
 
 	if(numerical_omega) then
-
 
 !	inquire('omega.dat')
 
@@ -482,21 +590,37 @@ subroutine read_numerical
 
 		endif
 
-		open(33,file='mphi.dat', status='old', action='read')
+                !NOTE: not accounting for an omega.dat as that seems to be deprecated
+                !if data is provided in a functional way:
+                if(present(input_omega)) then
+                        do i = 1, size(input_omega,1)
+                                mphi_data(i,1) = input_omega(i,1)
+                                mphi_data(i,2) = input_omega(i,2)
+                        enddo
+                        !print *, mphi_data
+                        data_dim = size(input_omega,1)
 
-		i = 0
+                !otherwise, open the datafiles instead
+                else 
 
-		do
+		        open(33,file='mphi.dat', status='old', action='read')
 
-			i = i+1
+		        i = 0
 
-			read(33,*,end=98) mphi_data(i,1),mphi_data(i,2)
+		        do
 
-		enddo
+			        i = i+1
+
+			        read(33,*,end=98) mphi_data(i,1),mphi_data(i,2)
+
+		        enddo
 
 		98	close(33)
 
-		data_dim = i-1
+		        data_dim = i-1
+                
+                endif
+
 		ibreak_fi = data_dim + mphi_ord
 
 		allocate(mphi_cscoef(1,data_dim))
@@ -519,21 +643,37 @@ subroutine read_numerical
 
 	if(numerical_mtheta) then
 
-		open(33,file='mtheta.dat', status='old', action='read')
+                !if data is provided in a functional way:
+                if(present(input_mtheta)) then
+                        do i = 1, size(input_mtheta,1)
+                                mtheta_data(i,1) = input_mtheta(i,1)
+                                mtheta_data(i,2) = input_mtheta(i,2)
+                        enddo
+                        !print *, mtheta_data
+                        data_dim = size(input_mtheta,1)
 
-		i = 0
+                !otherwise, open the datafiles instead
+                else 
 
-		do
+		        open(33,file='mtheta.dat', status='old', action='read')
 
-			i = i+1
+		        i = 0
 
-			read(33,*,end=109) mtheta_data(i,1),mtheta_data(i,2)
+		        do
 
-		enddo
+			        i = i+1
 
-		109	close(33)
+			        read(33,*,end=109) mtheta_data(i,1),mtheta_data(i,2)
 
-		data_dim = i-1
+		        enddo
+
+		        109	close(33)
+
+		        data_dim = i-1
+                endif
+
+!----------------------------------------------------------------------------
+
 		ibreak_th = data_dim + mtheta_ord
 
 		allocate(mtheta_cscoef(1,data_dim))
@@ -552,7 +692,7 @@ subroutine read_numerical
 
 				if(abs(mtheta_data(i,2))>mach_theta_num) then
 
-					mach_theta_num = mtheta_data(i,2)
+				        mach_theta_num = mtheta_data(i,2)
 
 				endif
 
@@ -567,10 +707,11 @@ subroutine read_numerical
 			mach_theta_num = 1.d-1
 
 		endif
-
+                
 	endif
 
 !----------------------------------------------------------------------------
+!NOTE: This seems to be deprecated now, as I don't know what vol.dat is supposed to be
 
 	if( (eq3_opt==4).or.(eq3_opt==5).or.  &
 			(p_opt==4).or.(p_opt==5) ) then
@@ -616,20 +757,32 @@ subroutine read_numerical
 
 	if((numerical_psiprim).and.(bc_type==5)) then
 
-		i = 0
+                !if data is provided in a functional way:
+                if(present(input_psiprim)) then
+                        do i = 1, size(input_psiprim,1)
+                                psiprim_data(i,1) = input_psiprim(i,1)
+                                psiprim_data(i,2) = input_psiprim(i,2)
+                        enddo
+                        !print *, psiprim_data
+                        psiprim_dim = size(input_psiprim,1)
 
-		open(33,file='psiprim.dat', status='old', action='read')
+                !otherwise, open the datafiles instead
+                else 
+		        i = 0
 
-		do
+		        open(33,file='psiprim.dat', status='old', action='read')
 
-			i = i+1
-			read(33,*,end=199) psiprim_data(i,1), psiprim_data(i,2)
+		        do
 
-		enddo
+			        i = i+1
+			        read(33,*,end=199) psiprim_data(i,1), psiprim_data(i,2)
+
+		        enddo
 
 	199	close(33)
 
-		psiprim_dim = i-1
+		        psiprim_dim = i-1
+                endif
 		ibreak_pp = psiprim_dim + psiprim_ord
 
 		allocate(psiprim_cscoef(1,psiprim_dim))
@@ -964,6 +1117,18 @@ subroutine readeqdsk(filename)
 	use exp_data
 
 	implicit none
+
+        interface
+                subroutine radial_plot(psi, truepsi, nx, nz, fname, iz, fname_output_data)
+                        import :: skind
+                        import :: dkind
+                        integer, intent(in) :: nx,nz,iz
+                        real (kind=skind), dimension(1:nx,1:nz), intent(in) :: psi
+                        real (kind=dkind), dimension(1:nx,1:nz), intent(in) :: truepsi
+                        character (len=*), intent(in) ::fname
+                        real (kind=dkind), dimension(1:nx*nz,1:3), intent(out), optional :: fname_output_data
+                end subroutine 
+        end interface
 
 	real(kind=dkind), dimension(:,:), allocatable :: psi_eqdsk
 	real(kind=skind), dimension(:,:), allocatable :: out

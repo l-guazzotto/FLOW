@@ -1,5 +1,5 @@
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
+subroutine radial_plot(psi,truepsi,nx,nz,fname,iz,fname_output_data)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
   use constant
@@ -11,10 +11,12 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
   real (kind=skind), dimension(1:nx,1:nz), intent(in) :: psi
   real (kind=dkind), dimension(1:nx,1:nz), intent(in) :: truepsi
   character (len=*), intent(in) :: fname
+  real (kind=dkind), dimension(1:nx*nz,1:3), intent(out), optional :: fname_output_data
   integer :: ix
   real (kind=dkind) :: x,z,ex,ez
-  integer i,j
+  integer i,j,k
 
+  ! If write_all is false, short circuit this function to only output the most necessary of outputs
 	if((write_all).or.(fname=='psi_step').or.(fname=='psi')   &
 			.or.(fname=='residual_step')) then
 
@@ -29,22 +31,24 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
 
 
     open (unit=17,file=fname//'.plt')
-	open (unit=18,file=fname//'.csv') ! csv output added by Ian
+    open (unit=18,file=fname//'.csv') 
 
     write(17,*)'TITLE="solution of GS equation with flow"'
     write(17,*)'Variables =" x ","y", "var"'		!, 	fname
-!    write(17,*)'Variables =" R [m] ","z [m]", "var"'		!, 	fname
-    write(17,*)'ZONE I=',nx,',J=',nz,',F=Point'
+    write(17,*)'Variables =" R [m] ","z [m]", "var"'		!, 	fname
+!    write(17,*)'ZONE I=',nx,',J=',nz,',F=Point'
 
 
 !  open (unit=44,file=fname//'.out',status='unknown', &
  !      form='formatted',action='write')
 
 
+        ! Loop over z grid positions (easy)
 	do j=1,nz
 
 		z = z_coord(j)
 
+                ! Loop over x grid positions, taking some edge cases into account
 		do i=1,nx
 
 			if(rmajor>1.d8) then
@@ -64,6 +68,8 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
 
 			endif
 
+                    ! integer to keep track of where we are in the i,j loops for allocating array data
+                    k = ((j-1)*nz + i)
 
 !		    if ((sort_grid(i,j,0)==1).or.(fname=='psi').or.(fname=='psi_step')  &
 		    if ( ((sort_grid(i,j,0)==2) .and.(tri_type==13)).or.  &
@@ -76,16 +82,31 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
 					.or.(fname=='residual_step').or.(fname=='rho_step').or.(fname=='psi_chease' ).or.(fname=='psi_eqdsk1')  &
 					.or.(fname=='psi_eqdsk2').or.(fname=='psi_eqdsk3').or.(bc_type==7).or.(bc_type==8)) then
 					write(17,88) x,z,psi(i,j)
-					write(18,89) x,z,psi(i,j)
+                                        write(18,88) x,z,psi(i,j)
+                                        if (present(fname_output_data)) then
+                                                fname_output_data(k,1) = x
+                                                fname_output_data(k,2) = z
+                                                fname_output_data(k,3) = psi(i,j)
+                                        endif
 	!				write(44,88) x,z,psi(i,j)
 				else
 					write(17,88) x,z,0.d0
-					write(18,89) x,z,0.d0
+                                        write(18,88) x,z,0.d0
+                                        if (present(fname_output_data)) then
+                                                fname_output_data(k,1) = x
+                                                fname_output_data(k,2) = z
+                                                fname_output_data(k,3) = psi(i,j)
+                                        endif
 				endif
 
 			else
 				write(17,88) x,z,0.d0
-				write(18,89) x,z,0.d0
+                                write(18,88) x,z,0.d0
+                                if (present(fname_output_data)) then
+                                        fname_output_data(k,1) = x
+                                        fname_output_data(k,2) = z
+                                        fname_output_data(k,3) = psi(i,j)
+                                endif
 !				write(44,88) x,z,0.d0
 			endif
 
@@ -93,10 +114,10 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
 	end do
 
 	close(17)
-	close(18)
+        close(18)
  !   close(44)
-88   format(3(e12.6,3x))
-89   format(2(e15.7,","), (e15.7))
+ ! Used to be e12.6 as format
+88   format(2(e15.7,","), (e15.7))
 
 
 
@@ -1627,4 +1648,86 @@ subroutine radial_plot_gg(gg,br_gg,bz_gg,nx,nz,iz)
 
 
 end subroutine radial_plot_gg
+
+!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+subroutine write_full_grid(thing,truepsi,nx,nz,fname,edgeval)
+!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+  use constant
+  use solver
+  use magnetic
+  implicit none
+
+  integer, intent(in) :: nx,nz
+  real (kind=dkind), dimension(1:nx,1:nz), intent(in) :: thing, truepsi
+  real(kind=dkind) :: edgeval
+  character (len=*), intent(in) :: fname
+  real (kind=dkind) :: x,z,ex,ez
+  integer i,j
+
+    open (unit=17, file=fname//'_full_bin.out', form='unformatted', status='unknown', action='write')
+
+
+
+	do j=1,nz
+
+		z = z_coord(j)
+
+		do i=1,nx
+
+			if(rmajor>1.d8) then
+			! likely to be an astrophysical case, normalize to rmajor
+
+				x = x_coord(i)/rmajor
+
+			elseif(2.d0*a_elps/(rmajor+rcenter)<1.d-3) then
+			! almost cylindrical case, reset x coordinate
+
+				x = x_coord(i)-rcenter
+
+			else
+			!standard toroidal case
+
+				x = x_coord(i)
+
+			endif
+
+
+		    if ( ((sort_grid(i,j,0)==2) .and.(tri_type==13)).or.  &
+					((sort_grid(i,j,0)>=1) .and.(tri_type/=13)).or.(fname=='psi_step')  &
+					.or.(fname=='residual_step').or.(fname=='rho_step').or.(fname=='psi').or.(fname=='psi_eqdsk1')  &
+					.or.(fname=='psi_eqdsk2').or.(fname=='psi_eqdsk3')  &
+					.or.(((bc_type==7).or.(bc_type==8)).and.(fname/='psi_clean'))) then
+
+				if((truepsi(i,j)>=fraction*psic).or.(fname=='psi').or.(fname=='psi_step')  &
+					.or.(fname=='residual_step').or.(fname=='rho_step').or.(fname=='psi_chease' ).or.(fname=='psi_eqdsk1')  &
+					.or.(fname=='psi_eqdsk2').or.(fname=='psi_eqdsk3').or.(bc_type==7).or.(bc_type==8)) then
+					write(17) x,z,thing(i,j)
+				else
+					write(17) x,z,edgeval
+				endif
+
+			else
+				write(17) x,z,edgeval
+			endif
+
+		end do
+	end do
+
+
+
+
+
+	do 33 j=1,nz
+	do 33 i=1,nx
+
+	33 write(17) thing(i,j)
+
+	close(17)
+
+	continue
+
+	return
+
+end subroutine write_full_grid
 

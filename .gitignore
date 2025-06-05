@@ -30,7 +30,7 @@
 *.exe
 *.out
 *.app
-FLOW_2017_exe_mac
+FLOW_2020_exe_mac
 
 # Workspace-specific files
 *.vscode

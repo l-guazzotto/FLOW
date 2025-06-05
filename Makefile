@@ -1,10 +1,16 @@
 F95 = gfortran
 #F95 = pgfortran
 
-#FFLAGS =  -O3 -fPIC -ffree-line-length-0
-#FFLAGS = -O3 -fPIC -ffree-line-length-0 -fcheck=all -Wall -g -fbacktrace -fbounds-check 
-FFLAGS =  -Og -g  -ffree-line-length-0
+#FFLAGS =  -O3
+#FFLAGS =  -O3 -ffree-line-length-0
 FFLAGS2 =   -ffree-line-length-0
+# For use if want to run with Python wrappers
+#FFLAGS = -O3 -fPIC -ffree-line-length-0
+# For debug purposes
+FFLAGS = -Og -g -ffree-line-length-0
+#FFLAGS = -Og -fPIC -ffree-line-length-0 -fcheck=all -Wall -g -fbacktrace -fbounds-check
+#FFLAGS = -Og -g -fPIC -ffree-line-length-0 -Wall -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -pedantic -fbacktrace
+
 LINK	= $(F95) $(FFLAGS)
 LINK2	= $(F95) $(FFLAGS2)
 
@@ -12,13 +18,13 @@ OBJECTS =  \
 constant.o array_dimensions.o pseudo_IMSL.o  interpolating_functions.o \
 	magnetic.o exp_data.o p_d_profile.o triangularity.o flow.o trans_solve.o  \
 	readinput.o data_dump.o mgrid.o inter_grid.o ellipt.o \
-	nclass_mod.o rarray_zero.o u_erf.o u_lu_backsub.o u_lu_decomp.o main.o
+	nclass_mod.o rarray_zero.o u_erf.o u_lu_backsub.o u_lu_decomp.o flow_mod.o main.o
 
 FLOW:  $(OBJECTS) 
-	$(LINK) $(OBJECTS)  -o FLOW_2017_exe_mac
+	$(LINK) $(OBJECTS)  -o FLOW_2020_exe_mac
 
 debug:  $(OBJECTS) 
-	$(LINK2) $(OBJECTS)  -o FLOW_2017_exe_mac
+	$(LINK2) $(OBJECTS)  -o FLOW_2020_exe_mac
 
 
 %.o : %.f90
@@ -73,7 +79,10 @@ triangularity.o: triangularity.f90 array_dimensions.o constant.o interpolating_f
 	exp_data.o
 	$(F95) $(FFLAGS)  -c triangularity.f90
 
-main.o: main.f90 constant.o trans_solve.o  exp_data.o triangularity.o magnetic.o
+flow_mod.o: flow_mod.f90 constant.o trans_solve.o exp_data.o triangularity.o magnetic.o
+	$(F95) $(FFLAGS)  -c flow_mod.f90
+
+main.o: main.f90 constant.o trans_solve.o  exp_data.o triangularity.o magnetic.o flow_mod.o
 	$(F95) $(FFLAGS)  -c main.f90
 
 
@@ -85,4 +94,4 @@ realclean:
 
 
 cleanall:
-	rm -rf *.o *.mod FLOW_2017_exe_mac
+	rm -rf *.o *.mod FLOW_2020_exe_mac
