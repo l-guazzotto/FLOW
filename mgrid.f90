@@ -413,7 +413,6 @@ subroutine set_grid(nx,nz)
 	real(kind=dkind) :: temp, dummy, rminor
 !	real(kind=dkind) :: rtsafe
 !	external rtsafe
-        print *, "test"
 
 	if(allocated(x_coord)) deallocate(x_coord)
 	if(allocated(z_coord)) deallocate(z_coord)
@@ -599,21 +598,22 @@ subroutine set_grid(nx,nz)
 
 	continue
 
-	open(33,file='grid.plt')
+!!$	open(33,file='grid.plt')
 
-	write(33,*)'TITLE="grid"'
-	write(33,*)'Variables =" R [m] ","z [m]", "boh"'
-	write(33,*)'ZONE I=',nx,',J=',nz,',F=Point'
+!!$	write(33,*)'TITLE="grid"'
+!!$	write(33,*)'Variables =" R [m] ","z [m]", "boh"'
+!!$	write(33,*)'ZONE I=',nx,',J=',nz,',F=Point'
 
-	do j = 1,nz
-	do i = 1,nx
+!!$	do j = 1,nz
+!!$	do i = 1,nx
 
-		write(33,*) x_coord(i), z_coord(j),  sort_grid(i,j,0)
+!!$		write(33,*) x_coord(i), z_coord(j),  sort_grid(i,j,0)
 
-	enddo
-	enddo
+!!$	enddo
+!!$	enddo
 
-	close(33)
+!!$	close(33)
+
 
 	return
 

@@ -28,10 +28,6 @@ module constant
   !distinguishes between internal and external grid points;
   !for LDX, second index marks the zone
 
-  integer, dimension(:,:), allocatable :: sort_grid_ref
-  ! September 9 2022: For free boundary calculations, the expected sort_frid (from input)
-  ! Only used for tri_type==-5
-
   ! Pi
   real (kind=dkind), parameter :: pi = &
        3.14159265358979323846d0

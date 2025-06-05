@@ -13014,14 +13014,10 @@ end subroutine ngs_solve_wrapper
     dx2 = dx*dx
     dz2 = dz*dz
 
-	ipsic = nx/2
-	jpsic = nz/2
-
 !	if((initialize_zones).and.(bc_type==7)) then
 	if(bc_type==7) then
 
 		call update_sort_grid(psi123(1,:,:),nx,nz,inorm)
-!		call update_sort_grid(psi123(1,:,:),nx,nz,inorm,0)
 !		initialize_zones = .false.
 
 	endif
@@ -27453,7 +27449,7 @@ function dist2(x1,z1,x2,z2) result(answer)
 end function dist2
 
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-subroutine update_sort_grid(psi,nx,nz,inorm,pass)
+subroutine update_sort_grid(psi,nx,nz,inorm)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ! The code will get here to update which points are in the main plasma and which ones are in the open field line region.
 ! For now, only the bc_type==7 option is considered ( March 12 2021).
@@ -27467,7 +27463,6 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	integer :: nx,nz
 	real(kind=dkind), intent(in) :: psi(1:nx,1:nz)
 	real(kind=dkind) :: inorm
-	integer, optional :: pass
 	integer :: i,j,p,k
 	real(kind=dkind) :: ex, ez, rminor, dx, dz, dummy, r_in
 	real(kind=dkind) :: small = 1.d-2
@@ -27475,8 +27470,6 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	integer :: index_counter, internal_counter
 	integer :: n_check = 10
 	real(kind=dkind) :: xloc, zloc, psiloc
-	integer :: tri_type_true
-	integer :: zone_check
 
 !	sort_grid = -1
 !	January 21 2022: commented the previous line.
@@ -27489,15 +27482,6 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 !!$		tri_type_m2_ready = .true.
 !!$	endif
 
-	tri_type_true = tri_type
-
-	! We need to skip the tri_type=-4 check on the first call to this routine
-	if(present(pass)) then
-		if((pass==0).and.(tri_type==-4)) then
-			tri_type = -1
-		endif
-	endif
-
 !!$	if((tri_type==-2).and.(tri_type_m2_ready)) then
 	if((tri_type==-2).or.(tri_type==-3)) then
 		! Proceed like in old tri_type==13, interpolate psi to find the boundary
@@ -27507,9 +27491,6 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	if(tri_type==-4) then
 		allocate(sort_grid_old(1:nx,1:nz))
 		sort_grid_old(:,:) = sort_grid(1:nx,1:nz,0)
-	endif
-
-	if((tri_type==-4).or.(tri_type==-5)) then
 		allocate(changed_index(2,nx*nz))
 	endif
 
@@ -27520,7 +27501,7 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 			cycle
 		endif
 
-		if((tri_type==-1).or.(tri_type==-4).or.(tri_type==-5)) then
+		if((tri_type==-1).or.(tri_type==-4)) then
 			call radius(i,j,nx,nz,ex,ez,rminor,dx,dz)
 		elseif(tri_type==-2) then
 			call radius_1_3(x_coord(i),z_coord(j),ex,ez,dummy,rminor,p,dummy,dummy,dummy)
@@ -27573,7 +27554,7 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 
 				endif
 
-			elseif((tri_type==-4).or.(tri_type==-5)) then
+			elseif(tri_type==-4) then
 
 				 if(((bc_type==7).or.(bc_type==8)).and.(psi(i,j)<0.d0))  then
 
@@ -27610,9 +27591,7 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 
 	endif
 
-	! September 9 2022: tri_type -5 compares the grid to the expected one using the same procedure as tri_type -4.
-
-	if((tri_type==-4).or.(tri_type==-5)) then
+	if(tri_type==-4) then
 
 		index_counter = 0
 		internal_counter = 0
@@ -27620,14 +27599,7 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 		do i = 1,nz
 		do j = 1,nx
 
-			if(tri_type==-4) then
-				zone_check = sort_grid_old(i,j)
-			elseif(tri_type==-5) then
-				zone_check = sort_grid_ref(i,j)
-			endif
-
-!			if (sort_grid(i,j,0)/=sort_grid_old(i,j)) then
-			if (sort_grid(i,j,0)/=zone_check) then
+			if (sort_grid(i,j,0)/=sort_grid_old(i,j)) then
 			! Mark all points for debugging purposes, but only check the ones marked as internal
 
 				index_counter = index_counter+1
@@ -27659,8 +27631,8 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 
 					do p = 1, n_check
 
-						xloc = x_coord(i) - (x_coord(i)-x_coord(ipsic))/(n_check+1.d0)*p
-						zloc = z_coord(j) - (z_coord(j)-z_coord(jpsic))/(n_check+1.d0)*p
+						xloc = x_coord(i) + (x_coord(i)-x_coord(ipsic))/(n_check+1.d0)*p
+						zloc = z_coord(j) + (z_coord(j)-z_coord(jpsic))/(n_check+1.d0)*p
 
 						psiloc =  DBS2VL(xloc,zloc,s_ord,s_ord,xknot_psi,zknot_psi, &
 								nx_FLOW,nz_FLOW,psi_bscoef)
@@ -27679,20 +27651,9 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 
 			enddo
 
-			deallocate(psi_bscoef)
-			deallocate(xknot_psi)
-			deallocate(zknot_psi)
-
 		endif
-
-		if(tri_type==-4) then
-			deallocate(sort_grid_old)
-		endif
-
-		deallocate(changed_index)
 
 	endif
-
 
 	if(tri_type==11) then
 
@@ -27722,8 +27683,7 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	open(33,file='grid.plt')
 
 	write(33,*)'TITLE="grid"'
-	write(33,*)'Variables =" x ","y", "boh"'
-!	write(33,*)'Variables =" R [m] ","z [m]", "boh"' ! visit does not like this
+	write(33,*)'Variables =" R [m] ","z [m]", "boh"'
 	write(33,*)'ZONE I=',nx,',J=',nz,',F=Point'
 
 	do j = 1,nz
@@ -27735,10 +27695,6 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	enddo
 
 	close(33)
-
-	if(tri_type_true/=tri_type) then
-		tri_type = tri_type_true
-	endif
 
 	continue
 
@@ -27787,7 +27743,7 @@ subroutine update_sort_grid_old(psi,nx,nz,inorm)
 		endif
 
 		! THIS NEEDS TO BE CLEANED UP: NOT CLEAR ON WHAT IS SUPPOSED TO HAPPEN FOR -3
-		if((tri_type==-1).or.(tri_type==-4).or.(tri_type==-5).or.(((tri_type==-2).or.(tri_type==-3)).and.(.not.(tri_type_m2_ready)))) then
+		if((tri_type==-1).or.(tri_type==-4).or.(((tri_type==-2).or.(tri_type==-3)).and.(.not.(tri_type_m2_ready)))) then
 			call radius(i,j,nx,nz,ex,ez,rminor,dx,dz)
 		elseif(((tri_type==-2).or.(tri_type==-3)).and.(tri_type_m2_ready)) then
 			call radius_1_3(x_coord(i),z_coord(j),ex,ez,dummy,rminor,p,dummy,dummy,dummy)
@@ -27984,7 +27940,7 @@ end subroutine update_sort_grid_old
 			r = r_in
 
 
-		elseif((tri_type==-1).or.(tri_type==-4).or.(tri_type==-5))then
+		elseif((tri_type==-1).or.(tri_type==-4))then
 			ex = dabs(((i-1.0d0)/(nx - 1.0d0) - 0.5d0)*x_size/a_elps)
 			ez = dabs(((j-1.0d0)/(nz - 1.0d0) - 0.5d0)*z_size/b_elps)
 			ex=dmax1(ex,ez)
@@ -28397,7 +28353,7 @@ end subroutine update_sort_grid_old
 
 			call splint(theta_dat,rminor_dat,d2rminor_dat,theta_points,theta,r)
 
-		elseif((tri_type==-1).or.(tri_type==-4).or.(tri_type==-5))then
+		elseif((tri_type==-1).or.(tri_type==-4))then
 			! square boundary, this will not be needed
 
         elseif(tri_type==5) then                       

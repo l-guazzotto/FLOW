@@ -93,7 +93,7 @@ real(kind=dkind) :: Bernmax, fBernmax, delta_Bern, psi_Bern
 	logical :: tri_type_m2_ready = .false.
 
 	real(kind=dkind) :: xT1, xT2, xT3, zT1, zT2, zT3, two_A_tri
-	integer :: ipsic, jpsic ! location of psi_max
+
 
 contains
 
@@ -13014,14 +13014,10 @@ end subroutine ngs_solve_wrapper
     dx2 = dx*dx
     dz2 = dz*dz
 
-	ipsic = nx/2
-	jpsic = nz/2
-
 !	if((initialize_zones).and.(bc_type==7)) then
 	if(bc_type==7) then
 
 		call update_sort_grid(psi123(1,:,:),nx,nz,inorm)
-!		call update_sort_grid(psi123(1,:,:),nx,nz,inorm,0)
 !		initialize_zones = .false.
 
 	endif
@@ -13650,24 +13646,12 @@ end subroutine ngs_solve_wrapper
 
 					! Find the max absolute value of psi in the plasma
 					if((tri_type==13).and.(sort_grid(i,j,0)==2)) then
-						if(dabs(psi123(h,i,j))>mx) then
-							mx = dabs(psi123(h,i,j))
-							ipsic = i
-							jpsic = j
-						endif
+						mx = dmax1(dabs(psi123(h,i,j)),mx)
 !					elseif((bc_type==7).and.((i>nx/3).and.(i<2*nx/3).and.(j>nz/3).and.(j<2*nz/3))) then
 					elseif((bc_type==7).and.(sort_grid(i,j,0)==2)) then
-						if(dabs(psi123(h,i,j))>mx) then
-							mx = dabs(psi123(h,i,j))
-							ipsic = i
-							jpsic = j
-						endif
+						mx = dmax1(dabs(psi123(h,i,j)),mx)
 					elseif((tri_type/=13).and.(bc_type/=7)) then
-						if(dabs(psi123(h,i,j))>mx) then
-							mx = dabs(psi123(h,i,j))
-							ipsic = i
-							jpsic = j
-						endif
+						mx = dmax1(dabs(psi123(h,i,j)),mx)
 					endif
 
 				endif
@@ -13837,7 +13821,7 @@ end subroutine ngs_solve_wrapper
           print *, "The Over-Relaxation Parameter =",orp,std_orp
 
  			call step_output(nx,psi123(1,:,:),rho,residual)
-			if(((tri_type==-2).or.(tri_type==-3)).and.(k==50).and.(.not.(tri_type_m2_ready))) then
+			if((tri_type==-2).and.(k==50).and.(.not.(tri_type_m2_ready))) then
 				initialize_r_for_tri_type_m2 = .true.
 			endif
 			! Only update the plasma/vacuum interface every 25 iterations
@@ -21796,8 +21780,6 @@ end subroutine ngs_solve_all_gauss
     do k = 1, nz
        do j = 1, nx
 
-		 ! March 29 2022: added a line to remo
-
 		 if(sort_grid(j,k,0)>=1) then
 
           ! Calculate the position of the (j,k) grid point
@@ -25306,7 +25288,7 @@ subroutine plasma_boundary(psi,xmax,zmax)
 				rguessr = rguessr + rloc*1.d-2
 			endif
 
-			if((j>1).and.(rguessr>2.d0*rloc)) then
+			if(rguessr>2.d0*rloc) then
 				print*, 'problem in r_edge at theta =', thetaloc
 				exit
 			endif
@@ -27058,7 +27040,7 @@ end function tri_area
 subroutine update_interface(psi,n,inorm)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ! This routine find the curve psi=0 inside the computational domain for free-boundary equilibrium.
-! The code will get here only for tri_type==13 (obsolete) or tri_type==-2 and tri_type==-3
+! The code will get here only for tri_type==13 (obsolete) or tri_type==-2
 
 	use exp_data, only : r_data_psi, xknot_psi, zknot_psi, psi_bscoef
 	use triangularity, only : theta_temp, r_ord, r_data
@@ -27067,7 +27049,7 @@ subroutine update_interface(psi,n,inorm)
 	implicit none
 
 	integer :: i, k, nth, alloc_stat, error
-	real(kind=dkind) :: rg1, rg2, smallr_in, smallr_out
+	real(kind=dkind) :: rg1, rg2, smallr_in, smallr_out, r_orp
 	integer :: n
 	real(kind=dkind), dimension(1:n,1:n) :: psi
 	real(kind=dkind) :: inorm
@@ -27077,9 +27059,7 @@ subroutine update_interface(psi,n,inorm)
 
 	external psi_sol
 
-	if(r_orp==0.d0) then
-		r_orp = 0.25d0
-	endif
+	r_orp = 0.05d0
 
 	if(tri_type==13) then
 
@@ -27181,7 +27161,7 @@ subroutine update_interface(psi,n,inorm)
 		smallr_in = dbsval(r_data_psi(i,1), r_ord, r_data(1:theta_points2+r_ord,6),  &
 			theta_points2, r_cscoef(2,1:theta_points2) )
 
-		inorm = max(inorm,dabs( ( (r_orp*r_data_psi(i,2) + (1.d0-r_orp)*smallr_in)/smallr_in )-1.d0) )
+		inorm = max(inorm,dabs( (r_orp*r_data_psi(i,2) + (1.d0-r_orp)*smallr_in)/smallr_in )-1.d0 )
 
 		r_data_psi(i,2) = r_orp*r_data_psi(i,2) + (1.d0-r_orp)*smallr_in
 
@@ -27244,7 +27224,7 @@ subroutine initialize_r_free_boundary(psi,n)
 ! the plasma boundary as the correspoinding point on the psi=0 curve. Note that contrary to the original
 ! routine we will always assume that psi=0 is the plasma edge.
 ! The external radius is also defined here. The way this is done is taken from initialize_bc_equations in FLOW2.
-! The code will get here only for tri_type==-2 and tri_type==-3.
+! The code will get here only for tri_type==-2.
 
 	use exp_data, only : r_data_psi, xknot_psi, zknot_psi, psi_bscoef
 	use triangularity, only : theta_temp, r_ord, r_data
@@ -27414,8 +27394,8 @@ subroutine psi_interp_setup(psi,n)
 		 stop
 	endif
 
-	call DBSNAK(nx_FLOW,x_coord(1:nx_FLOW),s_ord,xknot_psi)
-	call DBSNAK(nz_FLOW,z_coord(1:nz_FLOW),s_ord,zknot_psi)
+	call DBSNAK(nx_FLOW,x_coord,s_ord,xknot_psi)
+	call DBSNAK(nz_FLOW,z_coord,s_ord,zknot_psi)
 
 	! (this 2 define the nodes)
 
@@ -27424,8 +27404,8 @@ subroutine psi_interp_setup(psi,n)
 !-----------------------------------------
 ! set psi
 
-	call DBS2IN(nx_FLOW,x_coord(1:nx_FLOW),nz_FLOW,z_coord(1:nz_FLOW),  &
-				psi,nx_FLOW, s_ord,s_ord,xknot_psi,zknot_psi,psi_bscoef(:,:) )
+	call DBS2IN(nx_FLOW,x_coord,nz_FLOW,z_coord,psi,nx_FLOW,  &
+				s_ord,s_ord,xknot_psi,zknot_psi,psi_bscoef(:,:) )
 
 !-----------------------------------------
 
@@ -27453,12 +27433,10 @@ function dist2(x1,z1,x2,z2) result(answer)
 end function dist2
 
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-subroutine update_sort_grid(psi,nx,nz,inorm,pass)
+subroutine update_sort_grid(psi,nx,nz,inorm)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ! The code will get here to update which points are in the main plasma and which ones are in the open field line region.
 ! For now, only the bc_type==7 option is considered ( March 12 2021).
-
-	use pseudo_IMSL, only : dbs2vl
 
 	implicit none
 
@@ -27467,16 +27445,9 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	integer :: nx,nz
 	real(kind=dkind), intent(in) :: psi(1:nx,1:nz)
 	real(kind=dkind) :: inorm
-	integer, optional :: pass
-	integer :: i,j,p,k
-	real(kind=dkind) :: ex, ez, rminor, dx, dz, dummy, r_in
+	integer :: i,j,p
+	real(kind=dkind) :: ex, ez, rminor, dx, dz, dummy
 	real(kind=dkind) :: small = 1.d-2
-	integer, allocatable :: sort_grid_old(:,:), changed_index(:,:)
-	integer :: index_counter, internal_counter
-	integer :: n_check = 10
-	real(kind=dkind) :: xloc, zloc, psiloc
-	integer :: tri_type_true
-	integer :: zone_check
 
 !	sort_grid = -1
 !	January 21 2022: commented the previous line.
@@ -27489,28 +27460,10 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 !!$		tri_type_m2_ready = .true.
 !!$	endif
 
-	tri_type_true = tri_type
-
-	! We need to skip the tri_type=-4 check on the first call to this routine
-	if(present(pass)) then
-		if((pass==0).and.(tri_type==-4)) then
-			tri_type = -1
-		endif
-	endif
-
 !!$	if((tri_type==-2).and.(tri_type_m2_ready)) then
-	if((tri_type==-2).or.(tri_type==-3)) then
+	if(tri_type==-2) then
 		! Proceed like in old tri_type==13, interpolate psi to find the boundary
 		call update_interface(psi(:,:),nx,inorm)
-	endif
-
-	if(tri_type==-4) then
-		allocate(sort_grid_old(1:nx,1:nz))
-		sort_grid_old(:,:) = sort_grid(1:nx,1:nz,0)
-	endif
-
-	if((tri_type==-4).or.(tri_type==-5)) then
-		allocate(changed_index(2,nx*nz))
 	endif
 
 	do j=1,nz
@@ -27520,12 +27473,10 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 			cycle
 		endif
 
-		if((tri_type==-1).or.(tri_type==-4).or.(tri_type==-5)) then
+		if(tri_type==-1) then
 			call radius(i,j,nx,nz,ex,ez,rminor,dx,dz)
 		elseif(tri_type==-2) then
 			call radius_1_3(x_coord(i),z_coord(j),ex,ez,dummy,rminor,p,dummy,dummy,dummy)
-		elseif(tri_type==-3) then
-			call radius_both(x_coord(i),z_coord(j),ex,ez,r_in,rminor) ! rminor is r_out
 		endif
 
 		if((ex*ex + ez*ez) > rminor**2) then
@@ -27560,139 +27511,12 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 					sort_grid(i,j,0) = 1
 				endif
 
-			elseif(tri_type==-3) then
-
-				 if((((bc_type==7).or.(bc_type==8)).and.(psi(i,j)<0.d0))  &
-						.or. ((bc_type==7).and.(psi(i,j)>0.d0).and.((ex*ex + ez*ez) > r_in**2))) then
-
-					sort_grid(i,j,0) = 1 ! External zone
-
-				else
-
-					sort_grid(i,j,0) = 2 ! Internal zone
-
-				endif
-
-			elseif((tri_type==-4).or.(tri_type==-5)) then
-
-				 if(((bc_type==7).or.(bc_type==8)).and.(psi(i,j)<0.d0))  then
-
-					sort_grid(i,j,0) = 1 ! External zone
-
-				else
-
-					sort_grid(i,j,0) = 2 ! Internal zone
-
-				endif
-
 			endif
 
 		endif
 
 	enddo
 	enddo
-
-	! March 29 2022: added check to fix radius inaccuracies in the corners
-
-	if((tri_type==-2).or.(tri_type==-3)) then
-
-		do i=1,nx
-
-			if(sort_grid(i,1,0)>0) then
-				sort_grid(i,1,0)=0
-			endif
-
-			if(sort_grid(i,nz,0)>0) then
-				sort_grid(i,nz,0)=0
-			endif
-
-		enddo
-
-	endif
-
-	! September 9 2022: tri_type -5 compares the grid to the expected one using the same procedure as tri_type -4.
-
-	if((tri_type==-4).or.(tri_type==-5)) then
-
-		index_counter = 0
-		internal_counter = 0
-
-		do i = 1,nz
-		do j = 1,nx
-
-			if(tri_type==-4) then
-				zone_check = sort_grid_old(i,j)
-			elseif(tri_type==-5) then
-				zone_check = sort_grid_ref(i,j)
-			endif
-
-!			if (sort_grid(i,j,0)/=sort_grid_old(i,j)) then
-			if (sort_grid(i,j,0)/=zone_check) then
-			! Mark all points for debugging purposes, but only check the ones marked as internal
-
-				index_counter = index_counter+1
-				changed_index(1,index_counter) = i
-				changed_index(2,index_counter) = j
-
-				if(sort_grid(i,j,0)==2) then
-					internal_counter = internal_counter + 1
-				endif
-
-			endif
-
-		enddo
-		enddo
-
-		if(internal_counter>0) then
-		! Check that all external points are classified as such
-
-			! First set up the psi interpolation
-			call psi_interp_setup(psi,nx)
-
-			do k = 1,index_counter
-
-				i = changed_index(1,k)
-				j = changed_index(2,k)
-
-				if(sort_grid(i,j,0)==2) then
-					! Check the point.
-
-					do p = 1, n_check
-
-						xloc = x_coord(i) - (x_coord(i)-x_coord(ipsic))/(n_check+1.d0)*p
-						zloc = z_coord(j) - (z_coord(j)-z_coord(jpsic))/(n_check+1.d0)*p
-
-						psiloc =  DBS2VL(xloc,zloc,s_ord,s_ord,xknot_psi,zknot_psi, &
-								nx_FLOW,nz_FLOW,psi_bscoef)
-
-						if(psiloc<=0.d0) then
-						! Mark the point as external
-
-							sort_grid(i,j,0) = 1
-							exit
-
-						endif
-
-					enddo
-
-				endif
-
-			enddo
-
-			deallocate(psi_bscoef)
-			deallocate(xknot_psi)
-			deallocate(zknot_psi)
-
-		endif
-
-		if(tri_type==-4) then
-			deallocate(sort_grid_old)
-		endif
-
-		deallocate(changed_index)
-
-	endif
-
 
 	if(tri_type==11) then
 
@@ -27722,8 +27546,7 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	open(33,file='grid.plt')
 
 	write(33,*)'TITLE="grid"'
-	write(33,*)'Variables =" x ","y", "boh"'
-!	write(33,*)'Variables =" R [m] ","z [m]", "boh"' ! visit does not like this
+	write(33,*)'Variables =" R [m] ","z [m]", "boh"'
 	write(33,*)'ZONE I=',nx,',J=',nz,',F=Point'
 
 	do j = 1,nz
@@ -27735,10 +27558,6 @@ subroutine update_sort_grid(psi,nx,nz,inorm,pass)
 	enddo
 
 	close(33)
-
-	if(tri_type_true/=tri_type) then
-		tri_type = tri_type_true
-	endif
 
 	continue
 
@@ -27768,13 +27587,13 @@ subroutine update_sort_grid_old(psi,nx,nz,inorm)
 !	January 21 2022: commented the previous line.
 !	STILL NEED TO CHECK THAT THIS DOES NOT BREAK TRI_TYPE=-1, -2
 
-	if(((tri_type==-2).or.(tri_type==-3)).and.(initialize_r_for_tri_type_m2)) then
+	if((tri_type==-2).and.(initialize_r_for_tri_type_m2)) then
 		call initialize_r_free_boundary(psi(:,:),nx)
 		initialize_r_for_tri_type_m2 = .false.
 		tri_type_m2_ready = .true.
 	endif
 
-	if(((tri_type==-2).or.(tri_type==-3)).and.(tri_type_m2_ready)) then
+	if((tri_type==-2).and.(tri_type_m2_ready)) then
 		! Proceed like in old tri_type==13, interpolate psi to find the boundary
 		call update_interface(psi(:,:),nx,inorm)
 	endif
@@ -27786,10 +27605,9 @@ subroutine update_sort_grid_old(psi,nx,nz,inorm)
 			cycle
 		endif
 
-		! THIS NEEDS TO BE CLEANED UP: NOT CLEAR ON WHAT IS SUPPOSED TO HAPPEN FOR -3
-		if((tri_type==-1).or.(tri_type==-4).or.(tri_type==-5).or.(((tri_type==-2).or.(tri_type==-3)).and.(.not.(tri_type_m2_ready)))) then
+		if((tri_type==-1).or.((tri_type==-2).and.(.not.(tri_type_m2_ready)))) then
 			call radius(i,j,nx,nz,ex,ez,rminor,dx,dz)
-		elseif(((tri_type==-2).or.(tri_type==-3)).and.(tri_type_m2_ready)) then
+		elseif((tri_type==-2).and.(tri_type_m2_ready)) then
 			call radius_1_3(x_coord(i),z_coord(j),ex,ez,dummy,rminor,p,dummy,dummy,dummy)
 		endif
 
@@ -27971,8 +27789,7 @@ end subroutine update_sort_grid_old
 		Z = 0.d0
 
 		! Edited tri_type=-1 and -2 on February 4 2022
-		! Added tri_type=-3 on March 25 2022
-		if((tri_type==-2).or.(tri_type==-3)) then
+		if(tri_type==-2) then
 
 			! plasma - vacuum case
 
@@ -27984,7 +27801,7 @@ end subroutine update_sort_grid_old
 			r = r_in
 
 
-		elseif((tri_type==-1).or.(tri_type==-4).or.(tri_type==-5))then
+		elseif(tri_type==-1)then
 			ex = dabs(((i-1.0d0)/(nx - 1.0d0) - 0.5d0)*x_size/a_elps)
 			ez = dabs(((j-1.0d0)/(nz - 1.0d0) - 0.5d0)*z_size/b_elps)
 			ex=dmax1(ex,ez)
@@ -28287,7 +28104,7 @@ end subroutine update_sort_grid_old
 
 			endif
 
-		elseif((tri_type==13).or.(tri_type==-2).or.(tri_type==-3)) then
+		elseif((tri_type==13).or.(tri_type==-2)) then
 
 			! plasma - vacuum case
 
@@ -28397,7 +28214,7 @@ end subroutine update_sort_grid_old
 
 			call splint(theta_dat,rminor_dat,d2rminor_dat,theta_points,theta,r)
 
-		elseif((tri_type==-1).or.(tri_type==-4).or.(tri_type==-5))then
+		elseif(tri_type==-1) then
 			! square boundary, this will not be needed
 
         elseif(tri_type==5) then                       
@@ -28506,56 +28323,6 @@ end subroutine update_sort_grid_old
 		continue
 
 	end subroutine radius_prim_theta
-
-!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	subroutine radius_both(x,z,ex,ez,r_in,r_out)
-!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-! The code will only get here for the plasma-vacuum case.
-! March 25 2022: For now, only the tri_type=-3 case is needed. Other cases are coded just in case.
-
-		use triangularity
-		use constant
-
-		real (kind=dkind), intent(in) :: x, z
-		real (kind=dkind), intent(out) :: ex, ez
-		real (kind=dkind) :: r_in, r_out, thet, angle
-
-		ex = x - rmajor
-		ez = z
-
-		if (ex==0.d0) then
-			thet = pi/2.d0 * dsign(1.d0,ez)
-			angle = thet
-		else
-			thet = datan2(ez,ex)
-			angle = thet
-		endif
-
-		if((tri_type==13).or.(tri_type==-2).or.(tri_type==-3)) then
-
-			! plasma - vacuum case
-
-			if(angle<0.d0) angle = angle + 2.d0*pi
-
-			r_out = dbsval(angle, r_ord, r_data(1:theta_points1+r_ord,3),  &
-				theta_points1, r_cscoef(1,1:theta_points1) )
-
-			r_in = dbsval(angle, r_ord, r_data(1:theta_points2+r_ord,6),  &
-				theta_points2, r_cscoef(2,1:theta_points2) )
-
-		else
-
-			print*, 'error in radius_both: tri_type=', tri_type
-			pause
-			stop
-
-		endif
-
-		continue
-
-
-	end subroutine radius_both
-
 
 
 

@@ -1,5 +1,5 @@
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-subroutine radial_plot(psi,truepsi,nx,nz,fname,iz,fname_output_data)
+subroutine radial_plot(psi,truepsi,nx,nz,fname,iz)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
   use constant
@@ -11,12 +11,10 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz,fname_output_data)
   real (kind=skind), dimension(1:nx,1:nz), intent(in) :: psi
   real (kind=dkind), dimension(1:nx,1:nz), intent(in) :: truepsi
   character (len=*), intent(in) :: fname
-  real (kind=dkind), dimension(1:nx*nz,1:3), intent(out), optional :: fname_output_data
   integer :: ix
   real (kind=dkind) :: x,z,ex,ez
-  integer i,j,k
+  integer i,j
 
-  ! If write_all is false, short circuit this function to only output the most necessary of outputs
 	if((write_all).or.(fname=='psi_step').or.(fname=='psi')   &
 			.or.(fname=='residual_step')) then
 
@@ -31,24 +29,21 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz,fname_output_data)
 
 
     open (unit=17,file=fname//'.plt')
-    open (unit=18,file=fname//'.csv') 
 
     write(17,*)'TITLE="solution of GS equation with flow"'
     write(17,*)'Variables =" x ","y", "var"'		!, 	fname
-    write(17,*)'Variables =" R [m] ","z [m]", "var"'		!, 	fname
-!    write(17,*)'ZONE I=',nx,',J=',nz,',F=Point'
+!    write(17,*)'Variables =" R [m] ","z [m]", "var"'		!, 	fname
+    write(17,*)'ZONE I=',nx,',J=',nz,',F=Point'
 
 
 !  open (unit=44,file=fname//'.out',status='unknown', &
  !      form='formatted',action='write')
 
 
-        ! Loop over z grid positions (easy)
 	do j=1,nz
 
 		z = z_coord(j)
 
-                ! Loop over x grid positions, taking some edge cases into account
 		do i=1,nx
 
 			if(rmajor>1.d8) then
@@ -68,8 +63,6 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz,fname_output_data)
 
 			endif
 
-                    ! integer to keep track of where we are in the i,j loops for allocating array data
-                    k = ((j-1)*nz + i)
 
 !		    if ((sort_grid(i,j,0)==1).or.(fname=='psi').or.(fname=='psi_step')  &
 		    if ( ((sort_grid(i,j,0)==2) .and.(tri_type==13)).or.  &
@@ -82,31 +75,13 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz,fname_output_data)
 					.or.(fname=='residual_step').or.(fname=='rho_step').or.(fname=='psi_chease' ).or.(fname=='psi_eqdsk1')  &
 					.or.(fname=='psi_eqdsk2').or.(fname=='psi_eqdsk3').or.(bc_type==7).or.(bc_type==8)) then
 					write(17,88) x,z,psi(i,j)
-                                        write(18,88) x,z,psi(i,j)
-                                        if (present(fname_output_data)) then
-                                                fname_output_data(k,1) = x
-                                                fname_output_data(k,2) = z
-                                                fname_output_data(k,3) = psi(i,j)
-                                        endif
 	!				write(44,88) x,z,psi(i,j)
 				else
 					write(17,88) x,z,0.d0
-                                        write(18,88) x,z,0.d0
-                                        if (present(fname_output_data)) then
-                                                fname_output_data(k,1) = x
-                                                fname_output_data(k,2) = z
-                                                fname_output_data(k,3) = psi(i,j)
-                                        endif
 				endif
 
 			else
 				write(17,88) x,z,0.d0
-                                write(18,88) x,z,0.d0
-                                if (present(fname_output_data)) then
-                                        fname_output_data(k,1) = x
-                                        fname_output_data(k,2) = z
-                                        fname_output_data(k,3) = psi(i,j)
-                                endif
 !				write(44,88) x,z,0.d0
 			endif
 
@@ -114,10 +89,8 @@ subroutine radial_plot(psi,truepsi,nx,nz,fname,iz,fname_output_data)
 	end do
 
 	close(17)
-        close(18)
  !   close(44)
- ! Used to be e12.6 as format
-88   format(2(e15.7,","), (e15.7))
+88   format(3(e12.6,3x))
 
 
 

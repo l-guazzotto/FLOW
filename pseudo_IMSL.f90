@@ -446,6 +446,7 @@ contains
        write(6,*) "xknot(1)     = ", xknot(1)
        write(6,*) "xknot(nx+kx) = ", xknot(nx+kx)
        write(6,*) "         x   = ", x
+!	   return
        stop
     endif
 

@@ -186,7 +186,7 @@ subroutine readinput(m)
 			psic_13 = psic - psi_e
 		endif
 
-		if( (bc_type==7).and.((tri_type==13).or.(tri_type==-1).or.(tri_type==-2).or.(tri_type==-3).or.(tri_type==-4).or.(tri_type==-5))) then	! WARNING!!!!!
+		if( (bc_type==7).and.((tri_type==13).or.(tri_type==-1).or.(tri_type==-2).or.(tri_type==-3).or.(tri_type==-4))) then	! WARNING!!!!!
 			continue
 		elseif( (bc_type>=3).and.(tri_type/=0).and.(tri_type/=8).and.(tri_type/=9)  &
 					.and.(tri_type/=18).and.(tri_type/=88) ) then

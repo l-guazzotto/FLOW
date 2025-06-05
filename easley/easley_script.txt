@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH -J test 
+##SBATCH --time=5:00:00 
+#SBATCH --job-name=FLOW_run     # create a short name for your job 
+#SBATCH --nodes=1                # node count 
+#SBATCH --ntasks-per-node=1     # number of tasks per node 
+#SBATCH --cpus-per-task=1        # cpu-cores per task 
+#SBATCH --mail-type=begin,end,fail --mail-user=lzg0022@auburn.edu 
+echo "echo1"
+cd $SLURM_SUBMIT_DIR
+$(pwd)
+
+cd /home/lzg0022/codes/FLOW/FLOW_2022/free_boundary_runs/test_1_-3_August_31_2022/10k_ite
+
+echo "echo2"
+/home/lzg0022/codes/FLOW/FLOW_2022/free_boundary_runs/test_1_-3_August_31_2022/10k_ite/FLOW_2022_exe_easley > terminal_output.txt
+

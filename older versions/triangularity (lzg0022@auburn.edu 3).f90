@@ -9,8 +9,7 @@ module triangularity
 	integer, parameter :: n_tri_lim = 20
 	integer theta_points,theta_points1,theta_points2
 	integer, parameter :: theta_points_max_lim = 1250
-	! tri_type = -5 -> same as -4, but use an expected shape from input. This version also includes a shape for the external boundary, not used for now.
-	! tri_type = -4 -> same as -1, but checking for spuriously marked external points by verifying changed points
+	! tri_type = -4 -> same as -1, but checking forspuriously marked external points
 	! tri_type = -3 -> free boundary, arbitrary external boundary (check)
 	! tri_type = -1, -2 -> free boundary, external boundary condition on a rectangular contour
 	! tri_type = 0 -> no triangularity: circular or elliptic boundary
@@ -154,13 +153,12 @@ module triangularity
 		call init_r0_standard
 
 	! February 3 2022: added tri_type==-2 to initialize the plasma radius
-	elseif ((tri_type==-2).or.(tri_type==-3).or.(tri_type==-5)) then
+	elseif ((tri_type==-2).or.(tri_type==-3)) then
 
 		! First initialize the inner radius from standard shape (this may be edited later),
 		! then read outer radius. The latter is needed for compatibility with existing routines.
 		! We may want to insert an option for just reading the expected shape from r2.dat,
 		! instead of writing it first from the standard shape.
-		! September 9 2022: added tri_type = -5
 		call init_r0_standard
 		call init_2rs
 
@@ -578,7 +576,7 @@ end subroutine plasma_shape_conversion
 
 	theta_points=max(theta_points1,theta_points2)
 
-	if((tri_type==-2).or.(tri_type==-3).or.(tri_type==-5))  then
+	if((tri_type==-2).or.(tri_type==-3))  then
 		if(allocated(r_data)) deallocate(r_data)
 		if(allocated(r_cscoef)) deallocate(r_cscoef)
 	endif
@@ -647,7 +645,7 @@ end subroutine plasma_shape_conversion
 
 	theta_points = theta_points_max
 
-	if((tri_type==-2).or.(tri_type==-3).or.(tri_type==-5))  then
+	if((tri_type==-2).or.(tri_type==-3))  then
 		allocate(r_data(theta_points+r_ord,6))
 		allocate(r_cscoef(2,theta_points))
 	else
@@ -692,7 +690,7 @@ end subroutine plasma_shape_conversion
 		tri_type = 8
 	endif
 
-	if ((tri_type==-2).or.(tri_type==-3).or.(tri_type==-5))  then
+	if ((tri_type==-2).or.(tri_type==-3))  then
 
 		! We need to save the file r2.dat and repeat the previous interpolation.
 		! This is inefficient, but not very expensive in context and it allows to recycle existing routines. [Be more specific?]

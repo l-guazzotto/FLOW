@@ -29,7 +29,7 @@
 
 	namelist/input_solver/ n_min, n, min_it, max_it, accelerate, fix_orp,  &
 						   bc_type, max_orp, bc_switch, write_all, write_all_bin, restart,  &
-						   jump_option, lambda0_fix, dir_switch, delta_Bern_fact
+						   jump_option, lambda0_fix, dir_switch, delta_Bern_fact, r_orp
 
 	namelist/input_Alf/ mach_alf_0, fraction, ffrac, amult, pmult, pfact, pexp,  &
 						p_eps, b_vert, b_edge

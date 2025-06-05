@@ -14,10 +14,10 @@ constant.o array_dimensions.o pseudo_IMSL.o  interpolating_functions.o \
 	nclass_mod.o rarray_zero.o u_erf.o u_lu_backsub.o u_lu_decomp.o main.o
 
 FLOW:  $(OBJECTS) 
-	$(LINK) $(OBJECTS)  -o FLOW_2022_exe_mac
+	$(LINK) $(OBJECTS)  -o FLOW_2022_exe_easley
 
 debug:  $(OBJECTS) 
-	$(LINK2) $(OBJECTS)  -o FLOW_2022_exe_mac
+	$(LINK2) $(OBJECTS)  -o FLOW_2022_exe_easley
 
 
 %.o : %.f90
@@ -84,4 +84,4 @@ realclean:
 
 
 cleanall:
-	rm -rf *.o *.mod FLOW_2022_exe_mac
+	rm -rf *.o *.mod FLOW_2022_exe_easley
