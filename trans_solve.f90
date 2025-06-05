@@ -6074,11 +6074,8 @@ function mach_phi(psi) result (answer)
 
 		if((apsi/psic) > 1.d0) then
 			answer = mphi_data(ibreak_fi-mphi_ord,2)
-		!Modified by Ian: trying to get 2020 version running DIII-D free-boundary input to work
-		elseif((apsi/psic) < mphi_data(1,1)) then
-			answer = mphi_data(1,2)
-		!elseif((apsi/psic)>=1.d0) then 
-			!answer = mphi_data(ibreak_fi-mphi_ord,2)
+		elseif((apsi/psic)>=1.d0) then 
+			answer = mphi_data(ibreak_fi-mphi_ord,2)
 		else
 
 			answer = dbsval(apsi/psic, mphi_ord, mphi_data(1:ibreak_fi,3),  &
@@ -6232,11 +6229,6 @@ function dmach_phidpsi(psi) result (answer)
 		if(apsi/psic>1.d0) then
 
 			answer = dbsder(1,1.d0, mphi_ord, mphi_data(1:ibreak_fi,3),  &
-							ibreak_fi-mphi_ord, mphi_cscoef(1,:) )
-		!Modified by Ian: trying to get 2020 version running DIII-D free-boundary input to work
-		elseif(apsi/psic<mphi_data(1,1)) then
-
-			answer = dbsder(1,0.d0, mphi_ord, mphi_data(1:ibreak_fi,3),  &
 							ibreak_fi-mphi_ord, mphi_cscoef(1,:) )
 
 		else
@@ -11551,7 +11543,7 @@ subroutine update_rho_gauss_first(psi_in,rho,b_phi,nx,nz,seek_mtm,mtm_acc,min_dr
 
 !		  print *, rho(i,j), i,j
 
-		  Alf = g_phi**2/rho(i,j)	! Alfvï¿½n square
+		  Alf = g_phi**2/rho(i,j)	! Alfvén square
 		  plocg = gamma*g_S*rho(i,j)**gamma
 !!$		  disc = -(1.d0-Alf)**2* ( Alf*(g_bfield**2+plocg)-plocg)  &
 		  disc = - ( Alf*(g_bfield**2+plocg)-plocg)  &
@@ -20898,7 +20890,7 @@ end subroutine ngs_solve_all_gauss
 
 			! check for hyperbolic regions
 
-		  Alf = malfven2(j,k)	! Alfvï¿½n square
+		  Alf = malfven2(j,k)	! Alfvén square
 		  plocg = gamma*Sofpsi(psi(j,k))*rho(j,k)**gamma
 		  bpol = sqrt(bx(j,k)**2+bz(j,k)**2)
 		  bfield=sqrt(bx(j,k)**2+by(j,k)**2+bz(j,k)**2)

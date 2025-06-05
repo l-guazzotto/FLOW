@@ -2,17 +2,13 @@ F95 = gfortran
 #F95 = pgfortran
 
 #FFLAGS =  -O3
-#FFLAGS =  -O3 -ffree-line-length-0
+FFLAGS =  -O3 -ffree-line-length-0
 FFLAGS2 =   -ffree-line-length-0
-# For use if want to run with Python wrappers
-#FFLAGS = -O3 -fPIC -ffree-line-length-0
-# For debug purposes
-FFLAGS = -Og -g -ffree-line-length-0
-#FFLAGS = -Og -fPIC -ffree-line-length-0 -fcheck=all -Wall -g -fbacktrace -fbounds-check
-#FFLAGS = -Og -g -fPIC -ffree-line-length-0 -Wall -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -pedantic -fbacktrace
-
+FFLAGS3 = -Og -fPIC -ffree-line-length-0
+#FFLAGS3 = -O3 -fPIC -ffree-line-length-0 -fcheck=all -Wall -g -fbacktrace -fbounds-check
 LINK	= $(F95) $(FFLAGS)
 LINK2	= $(F95) $(FFLAGS2)
+LINK3	= $(F95) $(FFLAGS3)
 
 OBJECTS =  \
 constant.o array_dimensions.o pseudo_IMSL.o  interpolating_functions.o \
@@ -21,69 +17,69 @@ constant.o array_dimensions.o pseudo_IMSL.o  interpolating_functions.o \
 	nclass_mod.o rarray_zero.o u_erf.o u_lu_backsub.o u_lu_decomp.o flow_mod.o main.o
 
 FLOW:  $(OBJECTS) 
-	$(LINK) $(OBJECTS)  -o FLOW_2020_exe_mac
+	$(LINK3) $(OBJECTS)  -o FLOW_2020_exe_mac
 
 debug:  $(OBJECTS) 
 	$(LINK2) $(OBJECTS)  -o FLOW_2020_exe_mac
 
 
 %.o : %.f90
-	$(F95) $(FFLAGS)  -c $<
+	$(F95) $(FFLAGS3)  -c $<
 
 %.o : %.for
-	$(F95) $(FFLAGS)  -c $<
+	$(F95) $(FFLAGS3)  -c $<
 
 
 data_dump.o: data_dump.f90 trans_solve.o magnetic.o constant.o triangularity.o exp_data.o \
 	pseudo_IMSL.o ellipt.o
-	$(F95) $(FFLAGS)  -c data_dump.f90
+	$(F95) $(FFLAGS3)  -c data_dump.f90
 
 ellipt.o: ellipt.f90 constant.o
-	$(F95) $(FFLAGS)  -c ellipt.f90
+	$(F95) $(FFLAGS3)  -c ellipt.f90
 
 exp_data.o: exp_data.f90 constant.o
-	$(F95) $(FFLAGS)  -c exp_data.f90
+	$(F95) $(FFLAGS3)  -c exp_data.f90
 
 
 flow.o: flow.f90 constant.o
-	$(F95) $(FFLAGS)  -c flow.f90
+	$(F95) $(FFLAGS3)  -c flow.f90
 
 
 inter_grid.o: inter_grid.f90 constant.o
-	$(F95) $(FFLAGS)  -c inter_grid.f90
+	$(F95) $(FFLAGS3)  -c inter_grid.f90
 
 interpolating_functions.o: interpolating_functions.f90 constant.o pseudo_IMSL.o
-	$(F95) $(FFLAGS)  -c interpolating_functions.f90
+	$(F95) $(FFLAGS3)  -c interpolating_functions.f90
 
 magnetic.o: magnetic.f90 constant.o
-	$(F95) $(FFLAGS)  -c magnetic.f90
+	$(F95) $(FFLAGS3)  -c magnetic.f90
 
 mgrid.o: mgrid.f90 constant.o trans_solve.o triangularity.o magnetic.o array_dimensions.o inter_grid.o
-	$(F95) $(FFLAGS)  -c mgrid.f90
+	$(F95) $(FFLAGS3)  -c mgrid.f90
 
 pseudo_IMSL.o: pseudo_IMSL.f90 constant.o
-	$(F95) $(FFLAGS)  -c pseudo_IMSL.f90
+	$(F95) $(FFLAGS3)  -c pseudo_IMSL.f90
 
 p_d_profile.o: p_d_profile.f90 constant.o
-	$(F95) $(FFLAGS)  -c p_d_profile.f90
+	$(F95) $(FFLAGS3)  -c p_d_profile.f90
 
 readinput.o: readinput.f90  array_dimensions.o constant.o flow.o magnetic.o p_d_profile.o \
              exp_data.o triangularity.o trans_solve.o interpolating_functions.o pseudo_IMSL.o
-	$(F95) $(FFLAGS)  -c readinput.f90
+	$(F95) $(FFLAGS3)  -c readinput.f90
 
 trans_solve.o: trans_solve.f90 constant.o magnetic.o p_d_profile.o flow.o triangularity.o \
 	exp_data.o interpolating_functions.o pseudo_IMSL.o
-	$(F95) $(FFLAGS)  -c trans_solve.f90
+	$(F95) $(FFLAGS3)  -c trans_solve.f90
 
 triangularity.o: triangularity.f90 array_dimensions.o constant.o interpolating_functions.o pseudo_IMSL.o \
 	exp_data.o
-	$(F95) $(FFLAGS)  -c triangularity.f90
+	$(F95) $(FFLAGS3)  -c triangularity.f90
 
 flow_mod.o: flow_mod.f90 constant.o trans_solve.o exp_data.o triangularity.o magnetic.o
-	$(F95) $(FFLAGS)  -c flow_mod.f90
+	$(F95) $(FFLAGS3)  -c flow_mod.f90
 
 main.o: main.f90 constant.o trans_solve.o  exp_data.o triangularity.o magnetic.o flow_mod.o
-	$(F95) $(FFLAGS)  -c main.f90
+	$(F95) $(FFLAGS3)  -c main.f90
 
 
 clean:
