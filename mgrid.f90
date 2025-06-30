@@ -37,7 +37,7 @@ subroutine mgrid(psi,rho,residual,b_phi)
   real (kind=dkind), dimension(:,:), allocatable :: eb_phi,ob_phi
   integer :: alloc_stat
   integer :: acc_switch = 65
-
+  real(kind=dkind) :: inorm ! Unutilized here, but important for convergence in ngs_solve
 
 
 !	allocate(ind_bound(1,1))
@@ -109,6 +109,9 @@ subroutine mgrid(psi,rho,residual,b_phi)
      print *, "Allocation Error"
      return
   end if
+! Uncomment below if you want to track opsi in debugger
+  if(allocated(opsi)) print *, opsi
+
 
   print *, "Grid  1  - Size ",nn,"x",nn
 
@@ -215,10 +218,11 @@ subroutine mgrid(psi,rho,residual,b_phi)
            print *, "Allocation Error"
            return
         end if
+		! Uncomment below if you want to track epsi in debugger
+  		if(allocated(epsi)) print *, epsi
 
 		! set grid
 		call set_grid(nn,nn)
-
         ! Interpolate the solution to the next level finer grid
         call interp_nonuni(opsi,nc,epsi,nn,err)
         if(err > 0) return
@@ -226,6 +230,9 @@ subroutine mgrid(psi,rho,residual,b_phi)
         if(err > 0) return
 		call interp_nonuni(ob_phi,nc,eb_phi,nn,err)
         if(err > 0) return
+		! For free-boundary calculations, fix sort_grid as it was overwritten by set_grid
+		call update_sort_grid(epsi,nn,nn,inorm)
+
         ! Free up the previous grid
         deallocate(opsi)
         deallocate(orho)
@@ -270,6 +277,9 @@ subroutine mgrid(psi,rho,residual,b_phi)
         if(err > 0) return
 		call interp_nonuni(eb_phi,nc,ob_phi,nn,err)
         if(err > 0) return
+
+		! For free-boundary calculations, fix sort_grid as it was overwritten by set_grid
+		call update_sort_grid(opsi,nn,nn,inorm)
 
         ! Free up the previous grid
         deallocate(epsi)
@@ -361,6 +371,9 @@ subroutine mgrid(psi,rho,residual,b_phi)
     deallocate(erho)
 	deallocate(eb_phi)
  end if
+
+ ! For free-boundary calculations, fix sort_grid as it was overwritten by set_grid
+ call update_sort_grid(psi,n,n,inorm)
 
  ! initialize boundary conditions
  call initialize_bc(n)
