@@ -7,6 +7,7 @@
 subroutine interp(uc,nc,uf,nf,err)
 !@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+  ! This subroutine isn't used anymore. Presumably kept for posterity reasons
   use constant
   implicit none
 
