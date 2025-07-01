@@ -231,7 +231,9 @@ subroutine mgrid(psi,rho,residual,b_phi)
 		call interp_nonuni(ob_phi,nc,eb_phi,nn,err)
         if(err > 0) return
 		! For free-boundary calculations, fix sort_grid as it was overwritten by set_grid
-		call update_sort_grid(epsi,nn,nn,inorm)
+		if(bc_type==7) then
+			call update_sort_grid(epsi,nn,nn,inorm)
+		endif
 
         ! Free up the previous grid
         deallocate(opsi)
@@ -279,7 +281,9 @@ subroutine mgrid(psi,rho,residual,b_phi)
         if(err > 0) return
 
 		! For free-boundary calculations, fix sort_grid as it was overwritten by set_grid
-		call update_sort_grid(opsi,nn,nn,inorm)
+		if(bc_type==7) then
+			call update_sort_grid(opsi,nn,nn,inorm)
+		endif
 
         ! Free up the previous grid
         deallocate(epsi)
@@ -373,7 +377,9 @@ subroutine mgrid(psi,rho,residual,b_phi)
  end if
 
  ! For free-boundary calculations, fix sort_grid as it was overwritten by set_grid
- call update_sort_grid(psi,n,n,inorm)
+ if(bc_type==7) then
+	call update_sort_grid(psi,n,n,inorm)
+ endif
 
  ! initialize boundary conditions
  call initialize_bc(n)
