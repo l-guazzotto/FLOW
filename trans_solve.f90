@@ -1007,8 +1007,14 @@ subroutine initialize_bc_minimum(n)
 !	if(n>=65) 	fix_orp = 1.1435d-1	!	fix_orp = fix_orp*7.d0	!	accelerate = .true.	!	
 !	if(n>=65) max_it = max_it*2 !
 
-	if( (bc_type<3).or.(bc_type==13).or.  &
-		( ((bc_type==4).or.(bc_type==5).or.(bc_type==7).or.(bc_type==8).or.(bc_type==14)).and.(n<bc_switch)) ) return
+	! No need to do all this for free-boundary case, so just shorting this subroutine
+	if(bc_type==7) then 
+		return
+	endif
+	
+	! And also shorting this for a bunch of other conditions (mostly for before bc_switch activates)
+	if( (bc_type<3).or.(bc_type==13).or.(bc_type==23).or.  &
+		( ((bc_type==4).or.(bc_type==5).or.(bc_type==8).or.(bc_type==14).or.(bc_type==24)).and.(n<bc_switch)) ) return
 
 	if(allocated(ind_bound)) deallocate(ind_bound)
 	if(allocated(coord_bound)) deallocate(coord_bound)
