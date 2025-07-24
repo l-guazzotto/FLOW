@@ -199,6 +199,7 @@ subroutine initialize_bc_equations(n)
 !	if(n>=65) max_it = max_it*2 !
 
 	! No need to do all this for free-boundary case, so just shorting this subroutine
+	! TODO: should come back and remove all other bc_type==7 checks after this because they're now redundant
 	if(bc_type==7) then 
 		return
 	endif
@@ -8717,7 +8718,7 @@ function omegaofpsi(psi, zone) result(answer)
     ! Put some peaked initial distribution in the center
     do i=1, nx
        do j=1, nz
-          ! Only solve the inner region problem
+          ! Only solve the inner region problem, as initialize_density will overwrite everything outside anyway
 
 		  if(sort_grid(i,j,0)<=0) then
               u(i,j) = 0.0d0
@@ -8725,7 +8726,7 @@ function omegaofpsi(psi, zone) result(answer)
 
 		  ! radius_1_3 isn't the best starting guess for free-boundary cases,
 		  ! but it shouldn't matter after just a few iterations
-		  if((tri_type==11).or.(tri_type==-13).or.(bc_type==7).or.(bc_type==8)) then
+		  if((tri_type==11).or.(tri_type==13).or.(bc_type==7).or.(bc_type==8)) then
 
 			call radius_1_3(x_coord(i),z_coord(j),ex,ez,th,rminor,  &
 								dummy_int,dummy(1),dummy(2),dummy(3))
