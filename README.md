@@ -33,5 +33,4 @@ For a more detailed description of the code, see [L. Guazzotto, R. Betti, J. Man
 
 * Project homepage: <https://www.auburn.edu/cosam/faculty/physics/guazzotto/research/FLOW_main.html>
 * Author homepage: <https://www.auburn.edu/cosam/faculty/physics/guazzotto/research/>
-* Code repository: <https://github.com/bradyelster/FLOW>
-* Documentation: <http://FLOW-framework.readthedocs.org>
+* Code repository: <https://github.com/l-guazzotto/FLOW>
