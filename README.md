@@ -29,8 +29,6 @@ The code main targets are:
 
 For a more detailed description of the code, see [L. Guazzotto, R. Betti, J. Manickam and S. Kaye, PoP 11, 604 (2004)](https://pubs.aip.org/aip/pop/article-abstract/11/2/604/260879/Numerical-study-of-tokamak-equilibria-with?redirectedFrom=fulltext)
 
-See the [documentation](http://FLOW-framework.readthedocs.org) for tutorials and information on getting started.
-
 ## Links
 
 * Project homepage: <https://www.auburn.edu/cosam/faculty/physics/guazzotto/research/FLOW_main.html>
