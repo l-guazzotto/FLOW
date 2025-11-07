@@ -8,9 +8,6 @@
   <a href="https://www.repostatus.org/#active">
     <img alt="Repo status" src="https://www.repostatus.org/badges/latest/active.svg" />
   </a>
-  <a href="http://flow-framework.readthedocs.org">
-    <img alt="Read the Docs" src="https://img.shields.io/readthedocs/dedalus-project">
-  </a>
   <a href="https://fortran-lang.org">
     <img alt="Fortran" src="https://img.shields.io/badge/Fortran-734f96?logo=fortran&style=flat" />
   </a>
