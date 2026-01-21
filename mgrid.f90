@@ -110,7 +110,7 @@ subroutine mgrid(psi,rho,residual,b_phi)
      return
   end if
 ! Uncomment below if you want to track opsi in debugger
-  if(allocated(opsi)) print *, opsi
+!  if(allocated(opsi)) print *, opsi
 
 
   print *, "Grid  1  - Size ",nn,"x",nn
@@ -219,7 +219,7 @@ subroutine mgrid(psi,rho,residual,b_phi)
            return
         end if
 		! Uncomment below if you want to track epsi in debugger
-  		if(allocated(epsi)) print *, epsi
+  		!if(allocated(epsi)) print *, epsi
 
 		! set grid
 		call set_grid(nn,nn)

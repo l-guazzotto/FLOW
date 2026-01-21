@@ -12961,7 +12961,7 @@ end subroutine ngs_solve_wrapper
 		 stop
 	endif
 	! Uncomment below if you want to track psi123 in debugger
-	if(allocated(psi123)) print *, psi123
+	!if(allocated(psi123)) print *, psi123
 	
 	psi123 = 0.d0
 
