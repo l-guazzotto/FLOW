@@ -6535,6 +6535,7 @@ function dmach_phidpsi(psi, zone) result (answer)
 
 				if(apsi/psic<mphi_data(1,1)) then
 					answer = 0.d0
+					return
 				else
 					omeg = dbsval(apsi/psic, mphi_ord, mphi_data(1:ibreak_fi,3),  &
 					ibreak_fi-mphi_ord, mphi_cscoef(1,1:ibreak_fi-mphi_ord) )
