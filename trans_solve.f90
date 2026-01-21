@@ -13775,7 +13775,7 @@ end subroutine ngs_solve_wrapper
 
 	   call update_b(psi123(1,:,:),rho,b_phi,nx,nz,orp,anorm2)
 
-!   	   call bc_psi_rho0(psi123(1,:,:),rho,nx,nz)
+   	   call bc_psi_rho0(psi123(1,:,:),rho,nx,nz)
 
 
 		!do j=1,nz
